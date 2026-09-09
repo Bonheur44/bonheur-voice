@@ -9,6 +9,7 @@ import { midiToName } from "@/lib/audio/notes";
 import { computeLevel } from "@/lib/progression";
 import { LEVELS } from "@/lib/skills";
 import { exportData, useAppStore } from "@/lib/store";
+import { syncService } from "@/lib/sync/service";
 import { useHydrated } from "@/lib/store/hooks";
 import type { AppData, Level } from "@/lib/types";
 
@@ -137,7 +138,7 @@ export default function SettingsPage() {
 
       <Card>
         <SectionTitle>Données</SectionTitle>
-        <p className="mb-3 text-sm text-fg-muted">Tout est stocké dans ce navigateur. Exporte un fichier pour sauvegarder ou changer d&apos;appareil.</p>
+        <p className="mb-3 text-sm text-fg-muted">Ta progression est enregistrée dans ton compte et mise en cache sur cet appareil. L&apos;export produit une copie hors ligne de tes données.</p>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={doExport}>⬇️ Exporter</Button>
           <Button variant="secondary" onClick={() => fileRef.current?.click()}>⬆️ Importer</Button>
@@ -145,7 +146,7 @@ export default function SettingsPage() {
           {!confirmReset ? (
             <Button variant="danger" onClick={() => setConfirmReset(true)}>Réinitialiser</Button>
           ) : (
-            <Button variant="danger" onClick={() => { resetAll(); setConfirmReset(false); setMessage("Données réinitialisées."); }}>
+            <Button variant="danger" onClick={async () => { await syncService.wipeRemote(); resetAll(); setConfirmReset(false); setMessage("Données réinitialisées, sur cet appareil comme dans ton compte."); }}>
               Confirmer la réinitialisation
             </Button>
           )}

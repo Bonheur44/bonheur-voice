@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Piano } from "@/components/audio/Piano";
-import { Logo } from "@/components/layout/AppShell";
+import { Logo } from "@/components/layout/Logo";
 import { Button, Callout, Card, Eyebrow, Segmented } from "@/components/ui";
 import { DURATION_OPTIONS } from "@/components/routine/SessionPlan";
 import { DEFAULT_TENOR_RANGE, midiToName } from "@/lib/audio/notes";
@@ -21,7 +21,7 @@ export default function OnboardingPage() {
 
   const finish = () => {
     complete({ lowNote: low, highNote: high, preferredDuration: duration });
-    router.replace("/");
+    router.replace("/dashboard");
   };
 
   return (

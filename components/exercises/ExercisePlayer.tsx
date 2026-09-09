@@ -424,7 +424,7 @@ function SessionSummary({ session, skillsBefore, skillsAfter, newAchievements }:
       </Callout>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <LinkButton href="/" size="lg" full>Retour à l&apos;accueil</LinkButton>
+        <LinkButton href="/dashboard" size="lg" full>Retour à l&apos;accueil</LinkButton>
         <LinkButton href="/progression" size="lg" variant="secondary" full>Voir ma progression</LinkButton>
       </div>
     </div>

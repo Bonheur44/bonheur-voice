@@ -5,36 +5,68 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
-import { useHydrated } from "@/lib/store/hooks";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { SetupRequired } from "@/components/auth/SetupRequired";
+import { SyncBadge } from "@/components/auth/SyncBadge";
+import { Spinner } from "@/components/ui";
+import { Logo } from "./Logo";
+
+export { Logo };
 
 const NAV = [
-  { href: "/", label: "Accueil", icon: HomeIcon },
+  { href: "/dashboard", label: "Accueil", icon: HomeIcon },
   { href: "/routine", label: "Séance", icon: PlayIcon },
   { href: "/exercises", label: "Exercices", icon: ListIcon },
   { href: "/progression", label: "Progrès", icon: ChartIcon },
   { href: "/tools", label: "Outils", icon: ToolsIcon },
 ];
 
+/** Pages consultables sans compte. */
+const PUBLIC_PATHS = ["/", "/login", "/reset-password", "/auth"];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`)));
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const hydrated = useHydrated();
+  const { user, ready, configured } = useAuth();
   const onboarded = useAppStore((s) => s.profile.onboarded);
+
+  const publicPage = isPublicPath(pathname);
   const immersive = pathname.startsWith("/routine/play") || pathname.startsWith("/onboarding");
 
+  // Filet côté navigateur : proxy.ts fait déjà la redirection côté serveur.
   useEffect(() => {
-    if (hydrated && !onboarded && !pathname.startsWith("/onboarding")) router.replace("/onboarding");
-  }, [hydrated, onboarded, pathname, router]);
+    if (publicPage || !configured || !ready || user) return;
+    router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [publicPage, configured, ready, user, pathname, router]);
 
-  if (immersive) {
-    return <main className="flex-1 flex flex-col">{children}</main>;
+  useEffect(() => {
+    if (publicPage || !ready || !user || onboarded) return;
+    if (!pathname.startsWith("/onboarding")) router.replace("/onboarding");
+  }, [publicPage, ready, user, onboarded, pathname, router]);
+
+  if (publicPage) return <main className="flex-1 flex flex-col">{children}</main>;
+
+  if (!configured) return <SetupRequired />;
+
+  if (!ready || !user) {
+    return (
+      <main className="flex-1 grid place-items-center">
+        <Spinner />
+      </main>
+    );
   }
+
+  if (immersive) return <main className="flex-1 flex flex-col">{children}</main>;
 
   return (
     <div className="flex-1 flex md:flex-row">
       <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 flex-col border-r border-border bg-bg-elevated/80 backdrop-blur sticky top-0 h-screen">
         <div className="px-5 py-6">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/dashboard" className="flex items-center gap-3">
             <Logo />
             <div>
               <div className="text-sm font-semibold leading-tight">Vocal Training</div>
@@ -44,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav className="flex-1 px-3 space-y-1">
           {NAV.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
@@ -60,8 +92,27 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="px-3 pb-5">
-          <Link href="/settings" className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium", pathname.startsWith("/settings") ? "bg-accent-soft text-accent-strong" : "text-fg-muted hover:bg-surface-2 hover:text-fg")}>
+        <div className="space-y-1 px-3 pb-5">
+          <div className="px-3 pb-2">
+            <SyncBadge />
+          </div>
+          <Link
+            href="/account"
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium",
+              pathname.startsWith("/account") ? "bg-accent-soft text-accent-strong" : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+            )}
+          >
+            <UserIcon className="h-5 w-5" />
+            <span className="truncate">Mon compte</span>
+          </Link>
+          <Link
+            href="/settings"
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium",
+              pathname.startsWith("/settings") ? "bg-accent-soft text-accent-strong" : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+            )}
+          >
             <GearIcon className="h-5 w-5" /> Réglages
           </Link>
         </div>
@@ -69,13 +120,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-border bg-bg/80 px-4 py-3 backdrop-blur">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
             <Logo small />
-            <span className="text-sm font-semibold">Vocal Training <span className="text-fg-subtle font-normal">· Tenor</span></span>
+            <span className="text-sm font-semibold">
+              Vocal Training <span className="font-normal text-fg-subtle">· Tenor</span>
+            </span>
           </Link>
-          <Link href="/settings" aria-label="Réglages" className={cn("rounded-lg p-2", pathname.startsWith("/settings") ? "text-accent-strong" : "text-fg-muted")}>
-            <GearIcon className="h-5 w-5" />
-          </Link>
+          <div className="flex items-center gap-1">
+            <SyncBadge />
+            <Link href="/account" aria-label="Mon compte" className={cn("rounded-lg p-2", pathname.startsWith("/account") ? "text-accent-strong" : "text-fg-muted")}>
+              <UserIcon className="h-5 w-5" />
+            </Link>
+            <Link href="/settings" aria-label="Réglages" className={cn("rounded-lg p-2", pathname.startsWith("/settings") ? "text-accent-strong" : "text-fg-muted")}>
+              <GearIcon className="h-5 w-5" />
+            </Link>
+          </div>
         </header>
 
         <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-5 pb-28 md:pb-10 animate-fade-in">{children}</main>
@@ -83,9 +142,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border bg-bg-elevated/90 backdrop-blur safe-bottom" aria-label="Navigation principale">
           <div className="grid grid-cols-5">
             {NAV.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
-                <Link key={item.href} href={item.href} className={cn("flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors", active ? "text-accent-strong" : "text-fg-subtle")}>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn("flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors", active ? "text-accent-strong" : "text-fg-subtle")}
+                >
                   <item.icon className={cn("h-5.5 w-5.5", active && "drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]")} />
                   {item.label}
                 </Link>
@@ -94,14 +157,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
       </div>
-    </div>
-  );
-}
-
-export function Logo({ small }: { small?: boolean }) {
-  return (
-    <div className={cn("grid place-items-center rounded-xl bg-gradient-to-br from-accent to-orange-600 text-black font-black shadow-glow", small ? "h-8 w-8 text-sm" : "h-10 w-10 text-base")} aria-hidden>
-      ♪
     </div>
   );
 }
@@ -144,6 +199,14 @@ function ToolsIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="M7 5v9M11 5v9M15 5v9M19 5v9" />
+    </svg>
+  );
+}
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
     </svg>
   );
 }

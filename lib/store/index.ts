@@ -8,8 +8,18 @@ import { generateSession } from "@/lib/routine/generator";
 import { ACHIEVEMENTS, computeLevel, computeStreak, initialSkills, scoreGain } from "@/lib/progression";
 import { DEFAULT_TENOR_RANGE } from "@/lib/audio/notes";
 import { STORAGE_KEY, localStorageAdapter } from "@/lib/storage";
+import { storageKeyFor } from "@/lib/supabase/config";
 import { clamp, hashString, toDayKey } from "@/lib/utils";
 
+const now = () => new Date().toISOString();
+
+/**
+ * Les valeurs par défaut sont volontairement laissées sans `updatedAt`.
+ * Lors d'une première connexion sur un nouvel appareil, l'état local est
+ * remis à zéro avant la lecture distante : sans horodatage, ces valeurs
+ * perdent systématiquement l'arbitrage face aux données du compte, ce qui
+ * évite d'écraser une progression existante.
+ */
 export function defaultProfile(): UserProfile {
   return {
     voiceType: "tenor",
@@ -18,9 +28,13 @@ export function defaultProfile(): UserProfile {
     preferredDuration: 20 * 60,
     level: 1,
     onboarded: false,
-    createdAt: new Date().toISOString(),
+    createdAt: now(),
     volume: 0.8,
   };
+}
+
+function defaultData(): AppData {
+  return { profile: defaultProfile(), skills: initialSkills(), sessions: [], currentSession: null, achievements: [] };
 }
 
 export interface AppState extends AppData {
@@ -37,6 +51,8 @@ export interface AppState extends AppData {
   abandonSession: () => void;
   effectiveLevel: () => Level;
   importData: (data: AppData) => void;
+  /** Remplace l'état par un instantané déjà fusionné, sans toucher aux horodatages. */
+  applySnapshot: (data: AppData) => void;
   resetAll: () => void;
 }
 
@@ -47,18 +63,14 @@ function effectiveLevelOf(profile: UserProfile, skills: Record<SkillId, SkillSta
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      profile: defaultProfile(),
-      skills: initialSkills(),
-      sessions: [],
-      currentSession: null,
-      achievements: [],
+      ...defaultData(),
       hydrated: false,
 
       setHydrated: () => set({ hydrated: true }),
 
-      updateProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
+      updateProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch, updatedAt: now() } })),
 
-      completeOnboarding: (patch) => set((s) => ({ profile: { ...s.profile, ...patch, onboarded: true } })),
+      completeOnboarding: (patch) => set((s) => ({ profile: { ...s.profile, ...patch, onboarded: true, updatedAt: now() } })),
 
       effectiveLevel: () => {
         const s = get();
@@ -77,13 +89,7 @@ export const useAppStore = create<AppState>()(
         if (s.currentSession && s.currentSession.date === today && s.currentSession.plannedDuration === wanted && s.currentSession.level === level) {
           return s.currentSession;
         }
-        const session = generateSession({
-          duration: wanted,
-          level,
-          skills: s.skills,
-          history: s.sessions,
-          date: today,
-        });
+        const session = { ...generateSession({ duration: wanted, level, skills: s.skills, history: s.sessions, date: today }), updatedAt: now() };
         set({ currentSession: session });
         return session;
       },
@@ -93,20 +99,27 @@ export const useAppStore = create<AppState>()(
         const today = toDayKey();
         const wanted = duration ?? s.currentSession?.plannedDuration ?? s.profile.preferredDuration;
         const prevSeed = s.currentSession?.seed ?? 0;
-        const session = generateSession({
-          duration: wanted,
-          level: effectiveLevelOf(s.profile, s.skills, s.sessions),
-          skills: s.skills,
-          history: s.sessions,
-          date: today,
-          seed: hashString(`${prevSeed}-${Date.now()}`),
-        });
+        const session = {
+          ...generateSession({
+            duration: wanted,
+            level: effectiveLevelOf(s.profile, s.skills, s.sessions),
+            skills: s.skills,
+            history: s.sessions,
+            date: today,
+            seed: hashString(`${prevSeed}-${Date.now()}`),
+          }),
+          updatedAt: now(),
+        };
         set({ currentSession: session });
         return session;
       },
 
       startSession: () =>
-        set((s) => (s.currentSession && !s.currentSession.startedAt ? { currentSession: { ...s.currentSession, startedAt: new Date().toISOString() } } : {})),
+        set((s) =>
+          s.currentSession && !s.currentSession.startedAt
+            ? { currentSession: { ...s.currentSession, startedAt: now(), updatedAt: now() } }
+            : {},
+        ),
 
       recordExercise: (index, data) =>
         set((s) => {
@@ -126,45 +139,59 @@ export const useAppStore = create<AppState>()(
               score: clamp(prev.score + gain, 0, 100),
               feedbackHistory: [...prev.feedbackHistory, data.feedback].slice(-10),
               exercisesDone: prev.exercisesDone + 1,
+              updatedAt: now(),
             };
           }
-          return { currentSession: { ...s.currentSession, exercises }, skills };
+          return { currentSession: { ...s.currentSession, exercises, updatedAt: now() }, skills };
         }),
 
       finishSession: () => {
         const s = get();
         if (!s.currentSession) return null;
         const total = s.currentSession.exercises.reduce((a, e) => a + (e.actualDuration ?? 0), 0);
-        const finished: Session = { ...s.currentSession, completedAt: new Date().toISOString(), totalDuration: total };
+        const finished: Session = { ...s.currentSession, completedAt: now(), totalDuration: total, updatedAt: now() };
         const sessions = [...s.sessions.filter((x) => x.id !== finished.id), finished];
         const level = effectiveLevelOf(s.profile, s.skills, sessions);
         const streak = computeStreak(sessions);
         const already = new Set(s.achievements.map((a) => a.id));
         const newAch: Achievement[] = ACHIEVEMENTS.filter((a) => !already.has(a.id) && a.check({ sessions, skills: s.skills, streak, level })).map((a) => ({
           id: a.id,
-          unlockedAt: new Date().toISOString(),
+          unlockedAt: now(),
         }));
         set({
           sessions,
           currentSession: null,
           achievements: [...s.achievements, ...newAch],
-          profile: { ...s.profile, level },
+          profile: { ...s.profile, level, updatedAt: now() },
         });
         return finished;
       },
 
       abandonSession: () => set({ currentSession: null }),
 
-      importData: (data) =>
+      importData: (data) => {
+        const ts = now();
         set({
-          profile: { ...defaultProfile(), ...data.profile },
-          skills: { ...initialSkills(), ...data.skills },
-          sessions: data.sessions ?? [],
-          currentSession: data.currentSession ?? null,
+          profile: { ...defaultProfile(), ...data.profile, updatedAt: ts },
+          skills: Object.fromEntries(
+            (Object.keys(initialSkills()) as SkillId[]).map((id) => [id, { ...initialSkills()[id], ...data.skills?.[id], updatedAt: ts }]),
+          ) as Record<SkillId, SkillState>,
+          sessions: (data.sessions ?? []).map((s) => ({ ...s, updatedAt: s.updatedAt ?? ts })),
+          currentSession: data.currentSession ? { ...data.currentSession, updatedAt: data.currentSession.updatedAt ?? ts } : null,
           achievements: data.achievements ?? [],
+        });
+      },
+
+      applySnapshot: (data) =>
+        set({
+          profile: data.profile,
+          skills: data.skills,
+          sessions: data.sessions,
+          currentSession: data.currentSession,
+          achievements: data.achievements,
         }),
 
-      resetAll: () => set({ profile: defaultProfile(), skills: initialSkills(), sessions: [], currentSession: null, achievements: [] }),
+      resetAll: () => set(defaultData()),
     }),
     {
       name: STORAGE_KEY,
@@ -175,6 +202,47 @@ export const useAppStore = create<AppState>()(
   ),
 );
 
-export function exportData(state: AppState): AppData {
+export function exportData(state: AppData): AppData {
   return { profile: state.profile, skills: state.skills, sessions: state.sessions, currentSession: state.currentSession, achievements: state.achievements };
+}
+
+/** Instantané courant de la progression. */
+export function snapshot(): AppData {
+  return exportData(useAppStore.getState());
+}
+
+/**
+ * Bascule le cache local vers la clé propre à un utilisateur.
+ *
+ * L'ordre des opérations compte : le middleware `persist` écrit à chaque
+ * modification de l'état, sous le nom de clé courant. Changer le nom avant
+ * toute écriture évite d'écraser le cache du compte précédent, ou les données
+ * enregistrées avant l'introduction des comptes.
+ */
+export async function switchStorageForUser(userId: string): Promise<void> {
+  const name = storageKeyFor(userId);
+  let existing: string | null = null;
+  try {
+    existing = typeof window === "undefined" ? null : window.localStorage.getItem(name);
+  } catch {
+    existing = null;
+  }
+  useAppStore.persist.setOptions({ name });
+  if (existing) {
+    // Un cache existe pour ce compte : il remplace intégralement l'état courant.
+    await useAppStore.persist.rehydrate();
+  } else {
+    // Aucun cache : on repart des valeurs par défaut, que la lecture distante enrichira.
+    useAppStore.setState(defaultData());
+  }
+}
+
+/**
+ * Vide l'état après une déconnexion, en écrivant dans une clé neutre :
+ * le cache hors ligne du compte qui vient d'être quitté reste intact
+ * pour la prochaine connexion sur cet appareil.
+ */
+export function resetToSignedOut(): void {
+  useAppStore.persist.setOptions({ name: `${STORAGE_KEY}:signed-out` });
+  useAppStore.setState(defaultData());
 }

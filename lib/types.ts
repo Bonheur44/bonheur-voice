@@ -75,6 +75,8 @@ export interface Session {
   totalDuration: number;
   /** Graine utilisée pour la génération (permet de régénérer). */
   seed: number;
+  /** Dernière modification locale (ISO). Sert à départager les appareils lors de la synchronisation. */
+  updatedAt?: string;
 }
 
 export interface SkillState {
@@ -83,10 +85,14 @@ export interface SkillState {
   feedbackHistory: Feedback[];
   /** Nombre d'exercices réalisés dans cette compétence. */
   exercisesDone: number;
+  /** Dernière modification locale (ISO). */
+  updatedAt?: string;
 }
 
 export interface UserProfile {
   voiceType: "tenor";
+  /** Nom affiché, repris du compte Google ou saisi à l'inscription. */
+  displayName?: string;
   /** Note MIDI la plus basse confortable. */
   lowNote: number;
   /** Note MIDI la plus haute confortable. */
@@ -97,6 +103,8 @@ export interface UserProfile {
   onboarded: boolean;
   createdAt: string;
   volume: number;
+  /** Dernière modification locale (ISO). */
+  updatedAt?: string;
 }
 
 export interface Achievement {

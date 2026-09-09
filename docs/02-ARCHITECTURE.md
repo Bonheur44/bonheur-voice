@@ -3,7 +3,8 @@
 ## 1. Stack
 
 - Next.js 16 (App Router), TypeScript strict, Tailwind CSS v4.
-- État global : Zustand + middleware `persist` (localStorage). L'adaptateur de stockage est isolé dans `lib/storage/` pour brancher plus tard Supabase/PostgreSQL et une authentification.
+- Comptes et base de données : Supabase (authentification par mot de passe et Google, Postgres avec Row Level Security). Voir §8.
+- État global : Zustand + middleware `persist` (localStorage), utilisé comme cache hors ligne par utilisateur ; la base fait référence entre appareils.
 - Audio : Web Audio API native (oscillateurs + enveloppes, métronome planifié, détection de hauteur par autocorrélation sur le micro). Aucune dépendance audio externe.
 - Tests : Vitest (générateur de séance, progression, notes/fréquences) et Playwright (parcours utilisateur, console, responsive).
 
@@ -107,3 +108,28 @@ Entrées : durée disponible, niveau, scores, historique des retours, date (grai
 8. **Réglages** : durée, tessiture, niveau, export/import/réinitialisation.
 
 Navigation mobile : barre inférieure 5 onglets (Accueil, Séance, Exercices, Progrès, Outils). Desktop : barre latérale.
+
+La racine `/` est une page de présentation publique ; le tableau de bord vit sur `/dashboard`. Un visiteur non connecté est redirigé vers `/login` par `proxy.ts`, et un visiteur connecté qui ouvre `/` arrive directement sur son tableau de bord.
+
+## 8. Comptes et synchronisation
+
+Ajouté après la première version, quand l'application a été ouverte à d'autres membres du pupitre.
+
+```text
+Navigateur
+ ├─ Store Zustand ── persist → localStorage, clé « …:v1:<userId> »  (cache hors ligne)
+ └─ SyncService ──── @supabase/supabase-js ──► Supabase
+                                               ├─ Auth (mot de passe, Google)
+                                               └─ Postgres + Row Level Security
+Serveur Next
+ ├─ app/auth/callback/route.ts  échange du code OAuth et des liens envoyés par courriel
+ └─ proxy.ts                    rafraîchit la session, protège les pages
+```
+
+**Tables** : `profiles`, `skills`, `sessions`, `achievements`, toutes indexées par `user_id`, toutes protégées par une politique `auth.uid() = user_id` en lecture comme en écriture. Un déclencheur crée le profil à l'inscription. Une fonction `delete_account()` en `security definer` permet à chacun de supprimer son propre compte sans exposer de clé de service au navigateur.
+
+**Écriture** : l'instantané complet est réécrit à chaque changement, après deux secondes de regroupement. Le volume est de l'ordre de quelques dizaines de lignes, ce qui rend le suivi d'un différentiel inutilement risqué. Une empreinte du contenu évite les envois redondants.
+
+**Fusion** : fonctions pures dans `lib/sync/merge.ts`, testées unitairement. Horodatage le plus récent gagnant, avec trois exceptions : l'onboarding ne se défait jamais, les séances sont réunies par identifiant plutôt qu'écrasées, et un objectif conserve sa première date d'obtention. Les horodatages viennent des appareils, ce qui suffit pour départager les modifications d'une même personne.
+
+**Séances non démarrées** : un plan généré mais jamais commencé n'est pas envoyé. Il se régénère à l'identique et éviter de le synchroniser supprime un trafic inutile à chaque ouverture.

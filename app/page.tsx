@@ -1,184 +1,132 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect } from "react";
-import { SkillBars } from "@/components/dashboard/SkillBars";
-import { SessionPlan } from "@/components/routine/SessionPlan";
-import { Badge, Callout, Card, Eyebrow, LinkButton, ProgressBar, SectionTitle, Spinner, Stat } from "@/components/ui";
-import { getExercise } from "@/data/exercises";
-import { buildRecommendations, completedSessions, computeStreak, levelProgress, totalTrainingTime } from "@/lib/progression";
-import { FEEDBACK_LABELS, LEVELS } from "@/lib/skills";
-import { useAppStore } from "@/lib/store";
-import { useHydrated, useLevel } from "@/lib/store/hooks";
-import { formatDayKey, formatDuration, formatHours, toDayKey } from "@/lib/utils";
+import { Card, Eyebrow, LinkButton } from "@/components/ui";
+import { SKILLS, SKILL_ORDER } from "@/lib/skills";
+import { EXERCISES } from "@/data/exercises";
 
-export default function DashboardPage() {
-  const hydrated = useHydrated();
-  const profile = useAppStore((s) => s.profile);
-  const skills = useAppStore((s) => s.skills);
-  const sessions = useAppStore((s) => s.sessions);
-  const current = useAppStore((s) => s.currentSession);
-  const ensure = useAppStore((s) => s.ensureTodaySession);
-  const level = useLevel();
-  const hasDoneToday = useAppStore((s) => s.sessions.some((x) => !!x.completedAt && x.date === toDayKey()));
+export const metadata = {
+  title: "Vocal Training — Tenor",
+  description: "Routine vocale quotidienne, progressive et personnalisée, pensée pour les ténors de chorale.",
+};
 
-  // On prépare la séance du jour, sauf si une séance a déjà été terminée aujourd'hui (l'utilisateur en relance une s'il le souhaite).
-  useEffect(() => {
-    if (hydrated && profile.onboarded && !hasDoneToday) ensure();
-  }, [hydrated, profile.onboarded, hasDoneToday, ensure]);
+const STEPS = [
+  { title: "Ta séance du jour", text: "Générée selon ton niveau, le temps dont tu disposes et tes retours des jours précédents." },
+  { title: "Un exercice à la fois", text: "Objectif, consignes, sensations à surveiller, erreurs fréquentes, minuteur et outil sonore." },
+  { title: "Ton ressenti", text: "Cinq réponses, de « très difficile » à « très facile ». C'est ce qui fait évoluer la routine." },
+  { title: "Ta progression", text: "Compétences, séries de jours, historique. Tout est enregistré dans ton compte." },
+];
 
-  if (!hydrated) {
-    return (
-      <div className="grid min-h-[50vh] place-items-center">
-        <Spinner />
-      </div>
-    );
-  }
-
-  const today = toDayKey();
-  const done = completedSessions(sessions);
-  const streak = computeStreak(sessions);
-  const totalTime = totalTrainingTime(sessions);
-  const recs = buildRecommendations(skills, sessions, level);
-  const lp = levelProgress(level, skills, sessions);
-  const todayDone = done.filter((s) => s.date === today);
-  const session = current && current.date === today ? current : null;
-  const started = !!session?.startedAt;
-  const recentExercises = [...done]
-    .reverse()
-    .flatMap((s) => s.exercises.filter((e) => e.completed).map((e) => ({ ...e, date: s.date })))
-    .slice(0, 5);
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
-
+export default function LandingPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <Eyebrow>{formatDayKey(today)}</Eyebrow>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{greeting} 👋</h1>
-        </div>
-        <Badge color="#f59e0b">Niveau {level} · {LEVELS[level].name}</Badge>
-      </div>
-
-      {/* Séance du jour */}
-      <Card glow className="relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-accent/10 blur-2xl" aria-hidden />
-        <div className="flex items-start justify-between gap-3">
+    <div className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6">
+      <header className="flex items-center justify-between py-5">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-accent to-orange-600 text-base font-black text-black shadow-glow" aria-hidden>
+            ♪
+          </div>
           <div>
-            <Eyebrow>Séance du jour</Eyebrow>
-            <h2 className="mt-1 text-xl font-semibold">
-              {todayDone.length > 0 && !session ? "Séance terminée ✓" : started ? "Séance en cours" : `${formatDuration(session?.plannedDuration ?? profile.preferredDuration)}`}
-            </h2>
-            <p className="mt-1 text-sm text-fg-muted">
-              {todayDone.length > 0 && !session
-                ? `Bravo. ${formatDuration(todayDone.reduce((a, s) => a + s.totalDuration, 0))} aujourd'hui. Tu peux en refaire une plus courte si ta voix est fraîche.`
-                : session
-                  ? `${session.exercises.length} exercices · ${LEVELS[level].tagline}`
-                  : "Préparation…"}
-            </p>
+            <div className="text-sm font-semibold leading-tight">Vocal Training</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Tenor</div>
           </div>
         </div>
-        {session && (
-          <div className="mt-4">
-            <SessionPlan session={session} compact />
-          </div>
-        )}
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <LinkButton href="/routine/play" size="lg" full>
-            {started ? "▶ Reprendre la séance" : todayDone.length > 0 && !session ? "▶ Nouvelle séance" : "▶ Commencer"}
+        <Link href="/login" className="text-sm font-medium text-fg-muted hover:text-fg">
+          Se connecter
+        </Link>
+      </header>
+
+      <section className="py-10 sm:py-16 animate-rise">
+        <Eyebrow>Chorale · pupitre de ténors</Eyebrow>
+        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
+          Progresser un peu,
+          <br />
+          <span className="text-accent-strong">tous les jours.</span>
+        </h1>
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-fg-muted sm:text-lg">
+          Une routine vocale courte et progressive : le souffle, la note qui ne tremble plus, la justesse, l&apos;articulation, les registres, et
+          surtout tenir sa ligne de ténor quand les autres voix chantent autre chose.
+        </p>
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <LinkButton href="/login" size="xl">
+            Créer mon compte
           </LinkButton>
-          <LinkButton href="/routine" size="lg" variant="secondary" full>
-            Ajuster la durée
+          <LinkButton href="/login" size="xl" variant="secondary">
+            J&apos;ai déjà un compte
           </LinkButton>
         </div>
-      </Card>
+        <p className="mt-4 text-xs text-fg-subtle">
+          {EXERCISES.length} exercices, {SKILL_ORDER.length} compétences suivies, séances de 10 à 45 minutes.
+        </p>
+      </section>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Série" value={`${streak} j`} emoji="🔥" hint={streak === 0 ? "Commence aujourd'hui" : streak === 1 ? "Premier jour" : "jours consécutifs"} />
-        <Stat label="Temps total" value={formatHours(totalTime)} emoji="⏱️" hint={`${done.length} séance${done.length > 1 ? "s" : ""}`} />
-        <Stat label="Niveau" value={`${level} / 4`} emoji="🎓" hint={LEVELS[level].name} />
-        <Stat label="Vers niveau suivant" value={`${Math.round(lp.ratio * 100)}%`} emoji="📈" hint={level >= 4 ? "Niveau maximal" : `Niveau ${level + 1}`} />
-      </div>
-
-      {/* Recommandation */}
-      {recs.length > 0 && (
-        <Callout tone={recs[0].tone} title={recs[0].title}>
-          {recs[0].message}
-        </Callout>
-      )}
-
-      {/* Compétences */}
-      <Card>
-        <SectionTitle
-          action={
-            <Link href="/progression" className="text-xs text-fg-muted underline-offset-2 hover:underline">
-              Détails →
-            </Link>
-          }
-        >
-          Mes compétences
-        </SectionTitle>
-        <SkillBars skills={skills} />
-      </Card>
-
-      {/* Vers le niveau suivant */}
-      {level < 4 && (
-        <Card>
-          <SectionTitle>Vers le niveau {level + 1} · {LEVELS[(level + 1) as 2 | 3 | 4].name}</SectionTitle>
-          <div className="space-y-2.5">
-            {lp.details.map((d) => (
-              <div key={d.label}>
-                <div className="mb-1 flex justify-between text-xs text-fg-muted">
-                  <span>{d.label}</span>
-                  <span className="font-mono">
-                    {d.current} / {d.target}
-                  </span>
-                </div>
-                <ProgressBar value={(d.current / d.target) * 100} height={6} color={d.current >= d.target ? "var(--color-success)" : undefined} />
+      <section className="py-8">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Ce que tu travailles</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {SKILL_ORDER.map((id) => (
+            <Card key={id} className="flex items-start gap-3">
+              <span className="text-xl" aria-hidden>
+                {SKILLS[id].emoji}
+              </span>
+              <div>
+                <div className="font-medium">{SKILLS[id].label}</div>
+                <div className="mt-0.5 text-sm text-fg-muted">{SKILLS[id].description}</div>
               </div>
-            ))}
-          </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="py-8">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Comment ça se passe</h2>
+        <ol className="grid gap-3 sm:grid-cols-2">
+          {STEPS.map((step, i) => (
+            <li key={step.title} className="rounded-2xl border border-border bg-surface p-4">
+              <div className="flex items-center gap-2">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent-strong">{i + 1}</span>
+                <span className="font-medium">{step.title}</span>
+              </div>
+              <p className="mt-2 text-sm text-fg-muted">{step.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="py-8">
+        <Card className="border-accent/25">
+          <h2 className="text-lg font-semibold tracking-tight">Le mode chorale</h2>
+          <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+            Ta ligne de ténor est jouée seule, puis accompagnée d&apos;une voix, puis de trois. Le volume de ta propre ligne baisse progressivement
+            jusqu&apos;à disparaître, pendant que soprano, alto et basse continuent. C&apos;est l&apos;entraînement direct de ce qui manque le plus en
+            répétition : garder sa ligne sans se laisser attirer par les autres.
+          </p>
         </Card>
-      )}
+      </section>
 
-      {/* Derniers exercices */}
-      <Card>
-        <SectionTitle
-          action={
-            <Link href="/history" className="text-xs text-fg-muted underline-offset-2 hover:underline">
-              Historique →
-            </Link>
-          }
-        >
-          Derniers exercices
-        </SectionTitle>
-        {recentExercises.length === 0 ? (
-          <p className="text-sm text-fg-muted">Aucun exercice réalisé pour l&apos;instant. Ta première séance t&apos;attend.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {recentExercises.map((e, i) => {
-              const ex = getExercise(e.exerciseId);
-              return (
-                <li key={i} className="flex items-center justify-between py-2 text-sm">
-                  <Link href={`/exercises/${e.exerciseId}`} className="truncate hover:text-accent-strong">
-                    {ex?.name}
-                  </Link>
-                  <span className="shrink-0 text-xs text-fg-subtle">
-                    {e.feedback ? FEEDBACK_LABELS[e.feedback].emoji : ""} {formatDayKey(e.date, { day: "numeric", month: "short" })}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+      <section className="py-8">
+        <h2 className="mb-3 text-lg font-semibold tracking-tight">Ce que l&apos;application ne fait pas</h2>
+        <div className="space-y-2 text-sm leading-relaxed text-fg-muted">
+          <p>
+            L&apos;analyse du micro donne un repère approximatif, utile sur une voyelle tenue dans une pièce calme. Elle se trompe parfois
+            d&apos;octave et n&apos;est pas fiable sur les consonnes. Aucun son n&apos;est enregistré ni transmis : tout reste dans ton navigateur.
+          </p>
+          <p>
+            Ce n&apos;est ni un professeur de chant, ni un diagnostic médical. La règle est simple : jamais de douleur, jamais de forçage, on
+            s&apos;arrête quand la voix fatigue.
+          </p>
+        </div>
+      </section>
 
-      <p className="text-center text-[11px] text-fg-subtle">
-        Cette application est un outil d&apos;entraînement, pas un diagnostic. Arrête en cas de douleur ou de fatigue vocale.
-      </p>
+      <section className="rounded-2xl border border-border bg-surface p-6 text-center sm:p-8">
+        <h2 className="text-xl font-semibold tracking-tight">Prêt pour la première séance ?</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
+          Quinze minutes suffisent. Tu règles ta zone de confort au piano, et la première routine est prête.
+        </p>
+        <div className="mt-5 flex justify-center">
+          <LinkButton href="/login" size="xl">
+            Commencer
+          </LinkButton>
+        </div>
+      </section>
+
+      <footer className="pt-10 text-center text-[11px] text-fg-subtle">Vocal Training — Tenor · outil d&apos;entraînement vocal personnel</footer>
     </div>
   );
 }

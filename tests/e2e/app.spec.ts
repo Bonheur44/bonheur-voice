@@ -10,8 +10,39 @@ function watchConsole(page: Page) {
   return errors;
 }
 
+const EMAIL = process.env.E2E_EMAIL ?? "";
+const PASSWORD = process.env.E2E_PASSWORD ?? "";
+
+/**
+ * La suite a besoin d'un compte de test réel sur le projet Supabase, car les
+ * pages sont désormais protégées. Sans identifiants, elle est ignorée plutôt
+ * que de produire des échecs trompeurs.
+ */
+test.skip(!EMAIL || !PASSWORD, "Renseigne E2E_EMAIL et E2E_PASSWORD dans .env.local pour exécuter cette suite.");
+
+async function signIn(page: Page) {
+  await page.goto("/login");
+  await page.getByLabel("Adresse e-mail").fill(EMAIL);
+  await page.getByLabel("Mot de passe").fill(PASSWORD);
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 20_000 });
+}
+
+/** Remet le compte de test à zéro pour que chaque scénario parte du même état. */
+async function resetAccount(page: Page) {
+  await page.goto("/settings");
+  const reset = page.getByRole("button", { name: "Réinitialiser", exact: true });
+  if (await reset.count()) {
+    await reset.click();
+    await page.getByRole("button", { name: "Confirmer la réinitialisation" }).click();
+    await expect(page.getByText(/Données réinitialisées/)).toBeVisible();
+  }
+}
+
 async function completeOnboarding(page: Page) {
-  await page.goto("/");
+  await signIn(page);
+  await resetAccount(page);
+  await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/onboarding/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("coach vocal");
   await page.getByRole("button", { name: "Continuer →" }).click();
@@ -24,7 +55,7 @@ async function completeOnboarding(page: Page) {
   await page.getByRole("button", { name: "Continuer →" }).click();
   await page.getByRole("tab", { name: "15 min" }).click();
   await page.getByRole("button", { name: /C'est parti/ }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/dashboard/);
 }
 
 test.describe("Vocal Training — Tenor", () => {
@@ -189,14 +220,14 @@ test.describe("Vocal Training — Tenor", () => {
     await page.goto("/settings");
     await expect(page.getByText("Ré3 → La4")).toBeVisible();
     await page.getByRole("tab", { name: /3 · Indépendance/ }).click();
-    await page.goto("/");
+    await page.goto("/dashboard");
     await expect(page.getByText("Niveau 3 · Indépendance")).toBeVisible();
     await page.goto("/routine");
     await expect(page.getByText(/Indépendance chorale · \d+ min|Mémoire mélodique · \d+ min/).first()).toBeVisible();
     await page.goto("/settings");
     await page.getByRole("button", { name: "Réinitialiser" }).click();
     await page.getByRole("button", { name: "Confirmer la réinitialisation" }).click();
-    await page.goto("/");
+    await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/onboarding/);
     expect(errors, errors.join("\n")).toEqual([]);
   });
