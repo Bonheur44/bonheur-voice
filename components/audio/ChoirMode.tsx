@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Callout } from "@/components/ui";
+import { CompactSoundSelect } from "./SoundPicker";
 import { WidgetFrame, useRange } from "./common";
 import { CHORALES } from "@/data/music/chorale";
 import type { VoicePart } from "@/data/music/types";
@@ -203,6 +204,7 @@ export function ChoirMode({
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} className="accent-amber-500" /> Décompte d&apos;une mesure
           </label>
+          <CompactSoundSelect kind="voices" />
           <div className="flex items-center gap-1">
             Tonalité
             <button onClick={() => setUserShift((s) => s - 1)} className="rounded-md px-2 py-0.5 hover:text-fg" aria-label="Un demi-ton plus bas">−</button>

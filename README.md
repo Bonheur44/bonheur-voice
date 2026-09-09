@@ -73,6 +73,7 @@ Sans ces variables, la suite de bout en bout est ignorée au lieu d'échouer. El
 - **Lecteur d'exercice** : objectif, pourquoi, consignes, points d'attention, erreurs fréquentes, sécurité, puis minuteur, répétitions, pause, navigation, outil interactif, et enfin le ressenti.
 - **Outils Web Audio** : guide respiratoire, métronome, bourdon, piano, « trouve la note » au micro, mesure de stabilité, intervalles, comparaison de hauteurs, gammes bornées à la zone confortable, apprentissage de mélodie, et le **mode chorale** SATB avec mixage par pupitre.
 - **Progression et historique** : radar et barres par compétence, minutes par semaine, activité sur 28 jours, objectifs, détail de chaque séance.
+- **Choix des timbres** : six sons pour l'instrument de référence, du piano au son pur, et six jeux de voix pour le chœur. Le réglage reste sur l'appareil, parce que le bon timbre dépend du casque ou du haut-parleur utilisé. Ces choix ne sont pas seulement esthétiques : le son pur rend les écarts de justesse plus audibles, l'orgue aide à tenir une note longue, et les voix identiques suppriment tout indice de timbre pour retrouver sa ligne, ce qui en fait le réglage le plus exigeant.
 - **Compte** : nom affiché, changement de mot de passe, état de synchronisation, suppression définitive du compte.
 
 ## Synchronisation

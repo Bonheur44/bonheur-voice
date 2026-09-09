@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { loadSoundPreferences } from "@/lib/audio/preferences";
 import { useAppStore } from "@/lib/store";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { SetupRequired } from "@/components/auth/SetupRequired";
@@ -36,6 +37,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const publicPage = isPublicPath(pathname);
   const immersive = pathname.startsWith("/routine/play") || pathname.startsWith("/onboarding");
+
+  // Le moteur audio suit les timbres choisis sur cet appareil.
+  useEffect(() => {
+    loadSoundPreferences();
+  }, []);
 
   // Filet côté navigateur : proxy.ts fait déjà la redirection côté serveur.
   useEffect(() => {

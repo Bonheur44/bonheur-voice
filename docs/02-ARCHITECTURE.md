@@ -93,6 +93,8 @@ Entrées : durée disponible, niveau, scores, historique des retours, date (grai
 ## 6. Audio & limites
 
 - Synthèse : oscillateurs avec enveloppe et filtre ; timbres distincts par voix (S/A/T/B) pour le mode chorale.
+- **Timbres choisissables** (`lib/audio/timbres.ts`) : un rôle sonore (`piano`, `drone`, `click`, `S`, `A`, `T`, `B`) est demandé par l'appelant, et le moteur le résout au moment de jouer selon les préférences de l'appareil. Les points d'appel n'ont pas eu à changer. `resolveTimbre` est une fonction pure, donc testable sans navigateur. Le clic du métronome reste fixe, et le bourdon suit l'instrument choisi mais toujours tenu et sans vibrato, puisqu'il sert de référence de hauteur. Les préférences vivent dans `lib/audio/preferences.ts`, en localStorage et hors du compte.
+- Enveloppe : attaque, chute et niveau de tenue, ce qui distingue un piano qui s'éteint d'un orgue qui tient. Le vibrato module le désaccord en cents plutôt que la fréquence en hertz, pour rester constant sur toute la tessiture.
 - Détection de hauteur : autocorrélation normalisée sur 2048 échantillons avec seuil de clarté. Fiable pour une voix seule, tenue, dans une pièce calme ; imprécise sur les attaques, les consonnes, les bruits de fond, et parfois trompée d'une octave. L'interface affiche uniquement « trop bas / correct / trop haut » (±25 cents) et une stabilité indicative.
 - Tout est présenté comme un repère pédagogique approximatif, jamais comme une mesure.
 

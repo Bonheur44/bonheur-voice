@@ -7,6 +7,7 @@ import { MelodyLearner } from "@/components/audio/MelodyLearner";
 import { MetronomeWidget } from "@/components/audio/MetronomeWidget";
 import { Piano } from "@/components/audio/Piano";
 import { ScalePlayer } from "@/components/audio/ScalePlayer";
+import { CompactSoundSelect } from "@/components/audio/SoundPicker";
 import { Tuner } from "@/components/audio/Tuner";
 import { useRange } from "@/components/audio/common";
 import { Callout, Card, Eyebrow } from "@/components/ui";
@@ -35,6 +36,9 @@ export function ToolView({ tool, name, description, emoji }: { tool: ToolId; nam
         <>
           {tool === "piano" && (
             <Card>
+              <div className="mb-3 flex justify-end">
+                <CompactSoundSelect kind="instrument" />
+              </div>
               <Piano from={Math.max(36, low - 7)} to={Math.min(84, high + 7)} lowMark={low} highMark={high} />
               <p className="mt-3 text-xs text-fg-subtle">
                 Touches claires : ta zone confortable ({midiToName(low)} → {midiToName(high)}). Modifiable dans les réglages.

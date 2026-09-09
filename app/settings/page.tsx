@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Piano } from "@/components/audio/Piano";
 import { Button, Callout, Card, Eyebrow, SectionTitle, Segmented, Slider, Spinner } from "@/components/ui";
 import { DURATION_OPTIONS } from "@/components/routine/SessionPlan";
+import { InstrumentPicker, VoiceSetPicker } from "@/components/audio/SoundPicker";
 import { getAudioEngine } from "@/lib/audio/engine";
 import { midiToName } from "@/lib/audio/notes";
 import { computeLevel } from "@/lib/progression";
@@ -134,6 +135,27 @@ export default function SettingsPage() {
         <Button size="sm" variant="secondary" className="mt-3" onClick={() => { const e = getAudioEngine(); e.setVolume(profile.volume); e.play(60, 0.6, "piano"); }}>
           🔊 Tester
         </Button>
+      </Card>
+
+      <Card>
+        <SectionTitle>Timbre de l&apos;instrument</SectionTitle>
+        <p className="mb-3 text-sm text-fg-muted">
+          Son utilisé pour le piano, le bourdon, les gammes et les mélodies. Le son pur est le plus net pour entendre si tu es juste, l&apos;orgue est
+          le plus pratique pour vérifier une note longue.
+        </p>
+        <InstrumentPicker previewNote={profile.lowNote + 7} />
+      </Card>
+
+      <Card>
+        <SectionTitle>Timbre des voix du chœur</SectionTitle>
+        <p className="mb-3 text-sm text-fg-muted">
+          Son des quatre pupitres en mode chorale. Plus les timbres se ressemblent, plus il est difficile de suivre ta ligne : c&apos;est une façon de
+          régler la difficulté.
+        </p>
+        <VoiceSetPicker previewNote={profile.lowNote + 7} />
+        <p className="mt-3 text-[11px] text-fg-subtle">
+          Ces deux réglages restent sur cet appareil et ne suivent pas ton compte : le bon timbre dépend de ton casque ou de ton haut-parleur.
+        </p>
       </Card>
 
       <Card>
