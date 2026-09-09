@@ -23,6 +23,18 @@ export function centsOff(freq: number, targetMidi: number): number {
   return (freqToMidi(freq) - targetMidi) * 100;
 }
 
+/**
+ * Écart en cents ramené dans [-600, 600].
+ * Chanter à l'octave n'est pas une faute de justesse : c'est un choix de registre,
+ * et le détecteur lui-même se trompe parfois d'octave.
+ */
+export function foldCents(cents: number): number {
+  let c = cents;
+  while (c > 600) c -= 1200;
+  while (c < -600) c += 1200;
+  return c;
+}
+
 export function isBlackKey(midi: number): boolean {
   return [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 }
@@ -58,8 +70,12 @@ export const SCALE_PATTERNS: Record<
   thirds: { label: "Tierces", steps: [0, 4, 2, 5, 4, 7, 5, 9, 7, 5, 4, 2, 0], description: "Do Mi Ré Fa Mi Sol …" },
 };
 
-/** Tessiture indicative d'un ténor amateur, uniquement comme point de départ modifiable. */
-export const DEFAULT_TENOR_RANGE = { low: 48, high: 67 }; // Do3 – Sol4
+/**
+ * Zone de travail neutre, avant tout pupitre déclaré et toute observation.
+ * Volontairement médiane : ce n'est pas la tessiture d'une voix particulière.
+ * Le repère par pupitre vit dans `lib/vocal/voiceParts.ts`.
+ */
+export const DEFAULT_RANGE = { low: 55, high: 72 }; // Sol3 – Do5
 
 export function clampMidi(midi: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, midi));

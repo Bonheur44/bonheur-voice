@@ -18,11 +18,11 @@ function session(id: string, patch: Partial<Session> = {}): Session {
 }
 
 function emptyRemote(patch: Partial<RemoteSnapshot> = {}): RemoteSnapshot {
-  return { profile: null, skills: {}, sessions: [], achievements: [], ...patch };
+  return { profile: null, skills: {}, sessions: [], achievements: [], observations: [], ...patch };
 }
 
 function localData(patch: Partial<AppData> = {}): AppData {
-  return { profile: profile(), skills: initialSkills(), sessions: [], currentSession: null, achievements: [], ...patch };
+  return { profile: profile(), skills: initialSkills(), sessions: [], currentSession: null, achievements: [], observations: [], ...patch };
 }
 
 describe("mergeProfile", () => {

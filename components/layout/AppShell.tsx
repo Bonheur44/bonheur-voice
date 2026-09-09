@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Logo />
             <div>
               <div className="text-sm font-semibold leading-tight">Vocal Training</div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Tenor</div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Coach choral</div>
             </div>
           </Link>
         </div>
@@ -129,7 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/dashboard" className="flex items-center gap-2.5">
             <Logo small />
             <span className="text-sm font-semibold">
-              Vocal Training <span className="font-normal text-fg-subtle">· Tenor</span>
+              Vocal Training <span className="font-normal text-fg-subtle">· Coach choral</span>
             </span>
           </Link>
           <div className="flex items-center gap-1">

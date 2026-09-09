@@ -23,8 +23,24 @@ export const EXERCISES: Exercise[] = [
 
 export const EXERCISES_BY_ID: Record<string, Exercise> = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));
 
+/**
+ * Anciens identifiants, conservés pour que l'historique reste lisible.
+ *
+ * Le passage au coach multi-pupitres a renommé les exercices choraux et de
+ * mémoire : ils désignaient une ligne de ténor, ils désignent maintenant « ma
+ * ligne ». Les séances déjà enregistrées référencent les anciens noms, et une
+ * séance passée ne se réécrit pas.
+ */
+const RENAMED: Record<string, string> = {
+  "choir-duo-bass": "choir-duo-support",
+  "choir-duo-soprano": "choir-duo-attractor",
+  "mel-tenor-line-1": "mel-my-line-1",
+  "mel-tenor-line-2": "mel-my-line-2",
+  "mel-tenor-full": "mel-my-line-full",
+};
+
 export function getExercise(id: string): Exercise | undefined {
-  return EXERCISES_BY_ID[id];
+  return EXERCISES_BY_ID[id] ?? EXERCISES_BY_ID[RENAMED[id]];
 }
 
 export function exercisesByCategory(category: SkillId): Exercise[] {

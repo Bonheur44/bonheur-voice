@@ -34,6 +34,9 @@ components/
   charts/        # graphiques SVG maison
 lib/
   types.ts                   # types partagés
+  vocal/                     # observations → bandes → estimation de pupitre
+  assessment/                # machine à états du test d'étendue, catalogue des tests
+  exercises/personalize.ts   # résolution des rôles {{me}}, {{attractor}}, {{support}}
   exercises/                 # accès au catalogue
   routine/generator.ts       # génération de séance
   progression/               # scores, niveaux, séries, recommandations
@@ -69,7 +72,14 @@ interface Exercise {
 interface SessionExercise { exerciseId; plannedDuration; actualDuration?; feedback?: 1..5; completed; skipped }
 interface Session { id; date; plannedDuration; level; exercises: SessionExercise[]; startedAt?; completedAt?; totalDuration }
 interface SkillState { score: 0..100; feedbackHistory: (1..5)[] }   // 10 derniers retours
-interface UserProfile { voiceType: 'tenor'; lowNote: midi; highNote: midi; preferredDuration; level; manualLevel?; onboarded }
+interface UserProfile {
+  declaredPart: VoicePart | 'unknown';   // déclaré, jamais déduit
+  choirLine: 'S'|'A'|'T'|'B';            // ligne travaillée, réglable à part
+  lowNote: midi; highNote: midi;         // zone de travail effective
+  rangeFromAssessment?: boolean;
+  preferredDuration; level; manualLevel?; onboarded;
+}
+interface VocalObservation { targetMidi; detectedMidi|null; spreadCents; heldSeconds; clarity; comfort?; source; at }
 ```
 
 ## 4. Génération d'une séance
@@ -90,12 +100,34 @@ Entrées : durée disponible, niveau, scores, historique des retours, date (grai
 - **Série** : jours consécutifs avec au moins une séance terminée (la série survit si la dernière séance date d'hier).
 - **Recommandations** : règles simples (compétence la plus faible, retour « très difficile » répété, retour « très facile » répété, niveau proche du déblocage, inactivité).
 
+## 5 bis. Profil vocal
+
+```text
+micro → PitchFrame → VocalObservation → NoteEvidence → VocalAnalysis → zone de travail → exercices
+```
+
+Seules les observations sont persistées ; tout le reste est recalculé par des fonctions pures. Le pupitre déclaré
+(`profile.declaredPart`) sert à amorcer le test et à choisir la ligne travaillée, et n'entre dans aucun calcul.
+
+- **Pondération** : demi-vie de 60 jours, plancher à 0,12, oubli au-delà d'un an, 400 observations conservées.
+- **Indexation** : l'étendue et le confort sont indexés sur la note *produite*, la justesse sur la note *cible*, avec
+  tolérance d'octave. Chanter à l'octave est un choix de registre, pas une faute.
+- **Bandes** : explorée ⊇ fiable ⊇ confortable ⊇ centrale, construites par grappes contiguës pour qu'une erreur
+  d'octave isolée n'élargisse pas l'étendue.
+- **Estimation** : recouvrement de Jaccard avec la tessiture de travail de chaque pupitre (0,55), proximité des
+  centres (0,30), compatibilité de l'étendue (0,15) ; normalisation au carré sur les sept pupitres. Une
+  `dataConfidence` séparée mesure la quantité de preuves, et rien n'est publié en dessous du seuil.
+- **Test d'étendue** (`lib/assessment/rangeTest.ts`) : machine à états pure. Centre, puis grave, puis aigu, deux
+  demi-tons par pas ; au premier échec on affine d'un demi-ton, au second on change de direction ; une gêne déclarée
+  arrête la direction sans rien reproposer au-delà ; une phase de vérification redemande les bords et le centre.
+
 ## 6. Audio & limites
 
 - Synthèse : oscillateurs avec enveloppe et filtre ; timbres distincts par voix (S/A/T/B) pour le mode chorale.
 - **Timbres choisissables** (`lib/audio/timbres.ts`) : un rôle sonore (`piano`, `drone`, `click`, `S`, `A`, `T`, `B`) est demandé par l'appelant, et le moteur le résout au moment de jouer selon les préférences de l'appareil. Les points d'appel n'ont pas eu à changer. `resolveTimbre` est une fonction pure, donc testable sans navigateur. Le clic du métronome reste fixe, et le bourdon suit l'instrument choisi mais toujours tenu et sans vibrato, puisqu'il sert de référence de hauteur. Les préférences vivent dans `lib/audio/preferences.ts`, en localStorage et hors du compte.
 - Enveloppe : attaque, chute et niveau de tenue, ce qui distingue un piano qui s'éteint d'un orgue qui tient. Le vibrato module le désaccord en cents plutôt que la fréquence en hertz, pour rester constant sur toute la tessiture.
-- Détection de hauteur : autocorrélation normalisée sur 2048 échantillons avec seuil de clarté. Fiable pour une voix seule, tenue, dans une pièce calme ; imprécise sur les attaques, les consonnes, les bruits de fond, et parfois trompée d'une octave. L'interface affiche uniquement « trop bas / correct / trop haut » (±25 cents) et une stabilité indicative.
+- Détection de hauteur : autocorrélation normalisée sur 2048 échantillons avec seuil de clarté, sur 60–1200 Hz
+  (Si1 d'une basse au Ré6 d'une soprano ; le plafond précédent, à 1000 Hz, coupait sous le Do6). Fiable pour une voix seule, tenue, dans une pièce calme ; imprécise sur les attaques, les consonnes, les bruits de fond, et parfois trompée d'une octave. L'interface affiche uniquement « trop bas / correct / trop haut » (±25 cents) et une stabilité indicative.
 - Tout est présenté comme un repère pédagogique approximatif, jamais comme une mesure.
 
 ## 7. Parcours utilisateur (UX)
@@ -110,6 +142,9 @@ Entrées : durée disponible, niveau, scores, historique des retours, date (grai
 8. **Réglages** : durée, tessiture, niveau, export/import/réinitialisation.
 
 Navigation mobile : barre inférieure 5 onglets (Accueil, Séance, Exercices, Progrès, Outils). Desktop : barre latérale.
+
+`/assessment` réunit la batterie d'évaluation, dont seul le test d'étendue est implémenté ; les sept autres sont
+déclarés « bientôt » plutôt que masqués, pour ne pas laisser croire qu'ils mesurent déjà quelque chose.
 
 La racine `/` est une page de présentation publique ; le tableau de bord vit sur `/dashboard`. Un visiteur non connecté est redirigé vers `/login` par `proxy.ts`, et un visiteur connecté qui ouvre `/` arrive directement sur son tableau de bord.
 
@@ -128,10 +163,14 @@ Serveur Next
  └─ proxy.ts                    rafraîchit la session, protège les pages
 ```
 
-**Tables** : `profiles`, `skills`, `sessions`, `achievements`, toutes indexées par `user_id`, toutes protégées par une politique `auth.uid() = user_id` en lecture comme en écriture. Un déclencheur crée le profil à l'inscription. Une fonction `delete_account()` en `security definer` permet à chacun de supprimer son propre compte sans exposer de clé de service au navigateur.
+**Tables** : `profiles`, `skills`, `sessions`, `achievements`, `observations`, toutes indexées par `user_id`, toutes protégées par une politique `auth.uid() = user_id` en lecture comme en écriture. Un déclencheur crée le profil à l'inscription. Une fonction `delete_account()` en `security definer` permet à chacun de supprimer son propre compte sans exposer de clé de service au navigateur.
 
 **Écriture** : l'instantané complet est réécrit à chaque changement, après deux secondes de regroupement. Le volume est de l'ordre de quelques dizaines de lignes, ce qui rend le suivi d'un différentiel inutilement risqué. Une empreinte du contenu évite les envois redondants.
 
 **Fusion** : fonctions pures dans `lib/sync/merge.ts`, testées unitairement. Horodatage le plus récent gagnant, avec trois exceptions : l'onboarding ne se défait jamais, les séances sont réunies par identifiant plutôt qu'écrasées, et un objectif conserve sa première date d'obtention. Les horodatages viennent des appareils, ce qui suffit pour départager les modifications d'une même personne.
+
+**Observations** : table en ajout seul. Une tentative appartient à un instant précis et n'est jamais corrigée, donc
+la fusion est une union par identifiant, sans arbitrage — ce qui permet à deux appareils d'enrichir le même profil
+sans que l'un efface le travail de l'autre.
 
 **Séances non démarrées** : un plan généré mais jamais commencé n'est pas envoyé. Il se régénère à l'identique et éviter de le synchroniser supprime un trafic inutile à chaque ouverture.

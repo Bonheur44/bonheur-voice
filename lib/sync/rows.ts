@@ -1,6 +1,8 @@
-import type { AchievementRow, ProfileRow, RemoteBundle, SessionRow, SkillRow } from "@/lib/supabase/types";
+import type { AchievementRow, ObservationRow, ProfileRow, RemoteBundle, SessionRow, SkillRow } from "@/lib/supabase/types";
 import type { AppData, Feedback, Level, Session, SessionExercise, SkillId, SkillState, UserProfile } from "@/lib/types";
 import { SKILLS } from "@/lib/skills";
+import { defaultLineFor, isChoirLine, isDeclaredPart } from "@/lib/vocal/voiceParts";
+import type { ChoirLine, Comfort, DeclaredPart, ObservationSource, VocalObservation } from "@/lib/vocal/types";
 import type { RemoteSnapshot } from "./merge";
 
 const EPOCH = "1970-01-01T00:00:00.000Z";
@@ -21,10 +23,29 @@ export function isWorthSyncing(session: Session): boolean {
 
 // ------------------------------------------------------------- base → application
 
+const COMFORTS: Comfort[] = ["easy", "ok", "strained", "impossible"];
+const SOURCES: ObservationSource[] = ["range-test", "pitch-test", "sustain", "exercise"];
+
+/**
+ * Le pupitre déclaré vient de la base sans être réinterprété : une valeur inconnue
+ * retombe sur « unknown » plutôt que sur un pupitre choisi arbitrairement.
+ */
+function asDeclaredPart(value: unknown): DeclaredPart {
+  return isDeclaredPart(value) ? value : "unknown";
+}
+
+function asChoirLine(value: unknown, fallback: DeclaredPart): ChoirLine {
+  if (isChoirLine(value)) return value;
+  return defaultLineFor(fallback);
+}
+
 export function profileFromRow(row: ProfileRow | null): UserProfile | null {
   if (!row) return null;
+  const declaredPart = asDeclaredPart(row.declared_part);
   return {
-    voiceType: "tenor",
+    declaredPart,
+    choirLine: asChoirLine(row.choir_line, declaredPart),
+    rangeFromAssessment: row.range_from_assessment ?? false,
     displayName: row.display_name ?? undefined,
     lowNote: row.low_note,
     highNote: row.high_note,
@@ -67,12 +88,43 @@ export function sessionFromRow(row: SessionRow): Session {
   };
 }
 
+export function observationFromRow(row: ObservationRow): VocalObservation {
+  const comfort = COMFORTS.find((c) => c === row.comfort);
+  return {
+    id: row.id,
+    targetMidi: Number(row.target_midi),
+    detectedMidi: row.detected_midi === null ? null : Number(row.detected_midi),
+    spreadCents: Number(row.spread_cents ?? 0),
+    heldSeconds: Number(row.held_seconds ?? 0),
+    clarity: Number(row.clarity ?? 0),
+    comfort,
+    source: SOURCES.find((s) => s === row.source) ?? "exercise",
+    at: row.observed_at,
+  };
+}
+
+export function observationsToRows(data: AppData, userId: string): ObservationRow[] {
+  return data.observations.map((o) => ({
+    id: o.id,
+    user_id: userId,
+    target_midi: o.targetMidi,
+    detected_midi: o.detectedMidi,
+    spread_cents: o.spreadCents,
+    held_seconds: o.heldSeconds,
+    clarity: o.clarity,
+    comfort: o.comfort ?? null,
+    source: o.source,
+    observed_at: o.at,
+  }));
+}
+
 export function bundleToSnapshot(bundle: RemoteBundle): RemoteSnapshot {
   return {
     profile: profileFromRow(bundle.profile),
     skills: skillsFromRows(bundle.skills),
     sessions: bundle.sessions.map(sessionFromRow),
     achievements: bundle.achievements.map((a) => ({ id: a.achievement_id, unlockedAt: a.unlocked_at })),
+    observations: bundle.observations.map(observationFromRow),
   };
 }
 
@@ -82,7 +134,9 @@ export function profileToRow(profile: UserProfile, userId: string): ProfileRow {
   return {
     user_id: userId,
     display_name: profile.displayName ?? null,
-    voice_type: profile.voiceType,
+    declared_part: profile.declaredPart,
+    choir_line: profile.choirLine,
+    range_from_assessment: profile.rangeFromAssessment ?? false,
     low_note: profile.lowNote,
     high_note: profile.highNote,
     preferred_duration: profile.preferredDuration,

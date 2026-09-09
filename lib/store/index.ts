@@ -6,7 +6,10 @@ import type { Achievement, AppData, Feedback, Level, Session, SkillId, SkillStat
 import { getExercise } from "@/data/exercises";
 import { generateSession } from "@/lib/routine/generator";
 import { ACHIEVEMENTS, computeLevel, computeStreak, initialSkills, scoreGain } from "@/lib/progression";
-import { DEFAULT_TENOR_RANGE } from "@/lib/audio/notes";
+import { DEFAULT_RANGE } from "@/lib/audio/notes";
+import { trimObservations } from "@/lib/vocal/observations";
+import { defaultLineFor } from "@/lib/vocal/voiceParts";
+import type { VocalObservation } from "@/lib/vocal/types";
 import { STORAGE_KEY, localStorageAdapter } from "@/lib/storage";
 import { storageKeyFor } from "@/lib/supabase/config";
 import { clamp, hashString, toDayKey } from "@/lib/utils";
@@ -22,9 +25,10 @@ const now = () => new Date().toISOString();
  */
 export function defaultProfile(): UserProfile {
   return {
-    voiceType: "tenor",
-    lowNote: DEFAULT_TENOR_RANGE.low,
-    highNote: DEFAULT_TENOR_RANGE.high,
+    declaredPart: "unknown",
+    choirLine: defaultLineFor("unknown"),
+    lowNote: DEFAULT_RANGE.low,
+    highNote: DEFAULT_RANGE.high,
     preferredDuration: 20 * 60,
     level: 1,
     onboarded: false,
@@ -34,7 +38,7 @@ export function defaultProfile(): UserProfile {
 }
 
 function defaultData(): AppData {
-  return { profile: defaultProfile(), skills: initialSkills(), sessions: [], currentSession: null, achievements: [] };
+  return { profile: defaultProfile(), skills: initialSkills(), sessions: [], currentSession: null, achievements: [], observations: [] };
 }
 
 export interface AppState extends AppData {
@@ -50,6 +54,12 @@ export interface AppState extends AppData {
   finishSession: () => Session | null;
   abandonSession: () => void;
   effectiveLevel: () => Level;
+  /** Enregistre des tentatives vocales et borne la fenêtre de mémoire. */
+  addObservations: (observations: VocalObservation[]) => void;
+  /** Applique une zone de travail issue d'une évaluation. */
+  applyWorkingRange: (range: { low: number; high: number }, fromAssessment?: boolean) => void;
+  /** Efface les observations sans toucher au reste de la progression. */
+  clearObservations: () => void;
   importData: (data: AppData) => void;
   /** Remplace l'état par un instantané déjà fusionné, sans toucher aux horodatages. */
   applySnapshot: (data: AppData) => void;
@@ -169,6 +179,22 @@ export const useAppStore = create<AppState>()(
 
       abandonSession: () => set({ currentSession: null }),
 
+      addObservations: (observations) =>
+        set((s) => (observations.length === 0 ? {} : { observations: trimObservations([...s.observations, ...observations]) })),
+
+      applyWorkingRange: ({ low, high }, fromAssessment = true) =>
+        set((s) => ({
+          profile: {
+            ...s.profile,
+            lowNote: Math.min(low, high - 4),
+            highNote: Math.max(high, low + 4),
+            rangeFromAssessment: fromAssessment,
+            updatedAt: now(),
+          },
+        })),
+
+      clearObservations: () => set({ observations: [] }),
+
       importData: (data) => {
         const ts = now();
         set({
@@ -179,6 +205,7 @@ export const useAppStore = create<AppState>()(
           sessions: (data.sessions ?? []).map((s) => ({ ...s, updatedAt: s.updatedAt ?? ts })),
           currentSession: data.currentSession ? { ...data.currentSession, updatedAt: data.currentSession.updatedAt ?? ts } : null,
           achievements: data.achievements ?? [],
+          observations: trimObservations(data.observations ?? []),
         });
       },
 
@@ -189,6 +216,7 @@ export const useAppStore = create<AppState>()(
           sessions: data.sessions,
           currentSession: data.currentSession,
           achievements: data.achievements,
+          observations: data.observations,
         }),
 
       resetAll: () => set(defaultData()),
@@ -196,14 +224,28 @@ export const useAppStore = create<AppState>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => localStorageAdapter),
-      partialize: (s) => ({ profile: s.profile, skills: s.skills, sessions: s.sessions, currentSession: s.currentSession, achievements: s.achievements }),
+      partialize: (s) => ({
+        profile: s.profile,
+        skills: s.skills,
+        sessions: s.sessions,
+        currentSession: s.currentSession,
+        achievements: s.achievements,
+        observations: s.observations,
+      }),
       onRehydrateStorage: () => (state) => state?.setHydrated(),
     },
   ),
 );
 
 export function exportData(state: AppData): AppData {
-  return { profile: state.profile, skills: state.skills, sessions: state.sessions, currentSession: state.currentSession, achievements: state.achievements };
+  return {
+    profile: state.profile,
+    skills: state.skills,
+    sessions: state.sessions,
+    currentSession: state.currentSession,
+    achievements: state.achievements,
+    observations: state.observations,
+  };
 }
 
 /** Instantané courant de la progression. */

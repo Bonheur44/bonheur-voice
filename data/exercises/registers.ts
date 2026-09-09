@@ -30,7 +30,7 @@ export const registersExercises: Exercise[] = [
     name: "Sentir la voix de tête",
     category: "registers",
     objective: "Trouver la voix de tête légère sur une sirène douce, en « ou » ou « i ».",
-    why: "La voix de tête n'est pas une voix « faible » : c'est un mécanisme léger qui permet d'atteindre l'aigu sans forcer. Chez un ténor de chœur, savoir y aller librement protège la voix et améliore la justesse dans l'aigu.",
+    why: "La voix de tête n'est pas une voix « faible » : c'est un mécanisme léger qui permet d'atteindre l'aigu sans forcer. Quel que soit le pupitre, savoir y aller librement protège la voix et améliore la justesse dans l'aigu.",
     instructions: [
       "Imite doucement un hibou : « ou-ou » léger, dans l'aigu, presque en fausset. Sens la vibration derrière le nez et dans le haut du crâne.",
       "Écoute la sirène jouée (elle monte et descend dans le haut de ta zone).",
@@ -54,7 +54,7 @@ export const registersExercises: Exercise[] = [
     name: "Sirène sur une octave",
     category: "registers",
     objective: "Traverser le passage entre poitrine et tête en glissando, sans cassure audible.",
-    why: "La cassure entre registres se trouve pour beaucoup de ténors vers Ré4-Sol4 (à adapter). La sirène très douce apprend au larynx à ajuster progressivement plutôt qu'à sauter d'un mécanisme à l'autre.",
+    why: "La zone de cassure entre registres ne se situe pas au même endroit selon les voix, et c'est ton évaluation qui la situe dans ta propre zone. La sirène très douce apprend au larynx à ajuster progressivement plutôt qu'à sauter d'un mécanisme à l'autre.",
     instructions: [
       "Sur « ou » ou « brrr » des lèvres, écoute la sirène jouée sur une octave.",
       "Glisse de bas en haut très lentement, à volume doux. Là où ça veut casser, allège encore et ralentis.",
@@ -129,7 +129,7 @@ export const registersExercises: Exercise[] = [
     name: "Doux dans le passage",
     category: "registers",
     objective: "Tenir une note dans la zone de passage à volume très doux, puis moyen, sans changer de mécanisme.",
-    why: "La zone de passage devient confortable quand tu peux y tenir une note à tout volume sans que la voix « bascule ». C'est l'objectif à long terme des registres pour un ténor.",
+    why: "La zone de passage devient confortable quand tu peux y tenir une note à tout volume sans que la voix « bascule ». C'est l'objectif à long terme du travail des registres, quel que soit le pupitre.",
     instructions: [
       "L'application propose une note dans le haut de ta zone confortable.",
       "Chante-la sur « ou » très doux, 4 secondes. Sens le mélange poitrine/tête.",

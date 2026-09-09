@@ -90,8 +90,11 @@ export class PitchDetector {
     }
 
     const sampleRate = this.ctx.sampleRate;
-    const minLag = Math.floor(sampleRate / 1000); // 1000 Hz max
-    const maxLag = Math.floor(sampleRate / 60); // 60 Hz min
+    // 1200 Hz couvre le Ré6 d'une soprano (1175 Hz) ; 60 Hz descend sous le Si1
+    // d'une basse (61,7 Hz). Le plafond précédent, à 1000 Hz, coupait sous le Do6
+    // et rendait la détection inutilisable pour une voix aiguë.
+    const minLag = Math.floor(sampleRate / 1200);
+    const maxLag = Math.floor(sampleRate / 60);
 
     // Autocorrélation normalisée (proche de la NSDF de McLeod)
     let bestLag = -1;

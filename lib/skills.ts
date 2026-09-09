@@ -98,7 +98,7 @@ export const SKILLS: Record<SkillId, SkillMeta> = {
     id: "choir",
     label: "Indépendance chorale",
     shortLabel: "Chorale",
-    description: "Trouver et tenir sa ligne de ténor malgré les autres voix.",
+    description: "Trouver et tenir sa propre ligne malgré les autres voix.",
     color: "#f87171",
     emoji: "🎭",
     initialScore: 15,
@@ -130,7 +130,7 @@ export const LEVELS: Record<Level, { name: string; tagline: string; focus: Skill
   },
   3: {
     name: "Indépendance",
-    tagline: "Ta ligne de ténor face aux autres voix.",
+    tagline: "Ta ligne face aux autres voix.",
     focus: ["melody", "choir", "registers", "musicality"],
   },
   4: {

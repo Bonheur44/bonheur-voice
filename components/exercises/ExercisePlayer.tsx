@@ -9,6 +9,7 @@ import { FeedbackPicker } from "./FeedbackPicker";
 import { InteractiveWidget } from "./InteractiveWidget";
 import { SessionPlan } from "@/components/routine/SessionPlan";
 import { getExercise } from "@/data/exercises";
+import { usePersonalizedExercise } from "./usePersonalized";
 import { getAudioEngine } from "@/lib/audio/engine";
 import { ACHIEVEMENTS } from "@/lib/progression";
 import { FEEDBACK_LABELS, SKILLS } from "@/lib/skills";
@@ -41,7 +42,7 @@ export function ExercisePlayer({ session }: { session: Session }) {
   const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
 
   const se = session.exercises[index];
-  const exercise = se ? getExercise(se.exerciseId) : undefined;
+  const exercise = usePersonalizedExercise(se ? getExercise(se.exerciseId) : undefined);
   const total = session.exercises.length;
   const planned = se?.plannedDuration ?? 0;
   const remaining = Math.max(0, planned - elapsed);

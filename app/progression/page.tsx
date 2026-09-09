@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ActivityGrid, SkillRadar, WeeklyBars } from "@/components/charts";
 import { SkillBars } from "@/components/dashboard/SkillBars";
+import { DeclaredVsEstimated, VocalProfileCard } from "@/components/vocal/VocalProfileCard";
 import { Card, Eyebrow, SectionTitle, Spinner, Stat } from "@/components/ui";
 import { ACHIEVEMENTS, completedSessions, computeStreak, dailyActivity, levelProgress, totalTrainingTime, weeklyStats } from "@/lib/progression";
 import { FEEDBACK_LABELS, LEVELS, SKILLS, SKILL_ORDER } from "@/lib/skills";
@@ -54,6 +55,9 @@ export default function ProgressionPage() {
         <Stat label="Exercices" value={exercisesDone} emoji="✅" />
         <Stat label="Série" value={`${streak} j`} emoji="🔥" />
       </div>
+
+      <VocalProfileCard />
+      <DeclaredVsEstimated />
 
       <Card>
         <SectionTitle>Compétences</SectionTitle>

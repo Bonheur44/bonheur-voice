@@ -135,7 +135,7 @@ export const stabilityExercises: Exercise[] = [
     name: "Note droite 12 secondes",
     category: "stability",
     objective: "Tenir 12 secondes stables, sur différentes hauteurs de ta zone.",
-    why: "Douze secondes couvrent la plupart des notes longues qu'un ténor de chœur doit tenir. On vérifie que la stabilité tient sur tout le registre, pas seulement au médium.",
+    why: "Douze secondes couvrent la plupart des notes longues qu'un choriste doit tenir. On vérifie que la stabilité tient sur toute ta zone de travail, pas seulement au médium.",
     instructions: [
       "L'application propose une note différente à chaque répétition.",
       "Tiens 12 s à volume doux-moyen.",

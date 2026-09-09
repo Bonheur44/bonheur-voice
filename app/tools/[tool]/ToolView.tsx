@@ -19,7 +19,7 @@ import type { ToolId } from "../tools";
 export function ToolView({ tool, name, description, emoji }: { tool: ToolId; name: string; description: string; emoji: string }) {
   const hydrated = useHydrated();
   const { low, high } = useRange();
-  const [melodyId, setMelodyId] = useState("tenor-line-full");
+  const [melodyId, setMelodyId] = useState("my-line-full");
 
   return (
     <div className="space-y-5">
@@ -41,7 +41,7 @@ export function ToolView({ tool, name, description, emoji }: { tool: ToolId; nam
               </div>
               <Piano from={Math.max(36, low - 7)} to={Math.min(84, high + 7)} lowMark={low} highMark={high} />
               <p className="mt-3 text-xs text-fg-subtle">
-                Touches claires : ta zone confortable ({midiToName(low)} → {midiToName(high)}). Modifiable dans les réglages.
+                Touches claires : ta zone de travail ({midiToName(low)} → {midiToName(high)}). Elle vient de ton évaluation, et reste modifiable dans les réglages.
               </p>
             </Card>
           )}
@@ -51,14 +51,23 @@ export function ToolView({ tool, name, description, emoji }: { tool: ToolId; nam
             <>
               <ScalePlayer pattern="scale5" bpm={100} allowPatternChange />
               <Callout tone="info" title="Comment l&apos;utiliser">
-                Choisis un pattern, une note de départ, puis chante avec le piano sur « nou », « mi » ou « a ». L&apos;outil monte d&apos;un demi-ton à chaque répétition et s&apos;arrête à ta note haute confortable : ne modifie pas ta zone pour « monter plus haut ».
+                Choisis un pattern, une note de départ, puis chante avec le piano sur « nou », « mi » ou « a ». L&apos;outil monte d&apos;un demi-ton à chaque répétition et s&apos;arrête en haut de ta zone de travail : ne l&apos;élargis pas pour « monter plus haut ».
               </Callout>
             </>
           )}
           {tool === "choir" && <ChoirMode />}
           {tool === "melody" && (
             <>
-              <select value={melodyId} onChange={(e) => setMelodyId(e.target.value)} aria-label="Choisir une mélodie" className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-accent">{MELODIES.filter((m) => m.mode === "song").map((m) => (<option key={m.id} value={m.id}>{m.name}</option>))}</select>
+              <select value={melodyId} onChange={(e) => setMelodyId(e.target.value)} aria-label="Choisir une mélodie" className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm outline-none focus:border-accent">
+              <option value="my-line-full">Ma ligne, en entier</option>
+              <option value="my-line-1">Ma ligne, phrase 1</option>
+              <option value="my-line-2">Ma ligne, phrase 2</option>
+              {MELODIES.filter((m) => m.mode === "song").map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
               <MelodyLearner key={melodyId} melodyId={melodyId} />
             </>
           )}

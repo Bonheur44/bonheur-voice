@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { LegacyImportPrompt } from "@/components/auth/LegacyImportPrompt";
 import { SkillBars } from "@/components/dashboard/SkillBars";
 import { SessionPlan } from "@/components/routine/SessionPlan";
+import { DeclaredVsEstimated, VocalProfileCard } from "@/components/vocal/VocalProfileCard";
 import { Badge, Callout, Card, Eyebrow, LinkButton, ProgressBar, SectionTitle, Spinner, Stat } from "@/components/ui";
 import { getExercise } from "@/data/exercises";
 import { buildRecommendations, completedSessions, computeStreak, levelProgress, totalTrainingTime } from "@/lib/progression";
@@ -98,6 +99,10 @@ export default function DashboardPage() {
           </LinkButton>
         </div>
       </Card>
+
+      {/* Profil vocal */}
+      <VocalProfileCard compact />
+      <DeclaredVsEstimated />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

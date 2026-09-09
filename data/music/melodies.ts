@@ -8,15 +8,21 @@ const frag = (label: string, midis: number[]): { label: string; notes: MelodyNot
   notes: midis.map((m) => q(m)),
 });
 
-/** Ligne de ténor de référence du choral « Chante, mon cœur » (Sol3–Do4). */
-export const TENOR_LINE_PHRASE_1: MelodyNote[] = [
+/**
+ * Ligne de ténor du choral « Chante, mon cœur » (Sol3–Do4).
+ *
+ * Ce n'est plus un exercice en soi : les exercices « ma ligne » extraient du
+ * choral la voix réellement travaillée (voir data/music/myLine.ts). Elle sert
+ * ici à composer la partie de ténor de la pièce, au même titre que les autres.
+ */
+export const CHORALE_1_TENOR_1: MelodyNote[] = [
   h(55, "Chan"), h(55, "te,"),
   h(57, "mon"), h(57, "cœur,"),
   h(60, "la"), h(59, "lu"),
   w(55, "mière", { breath: true }),
 ];
 
-export const TENOR_LINE_PHRASE_2: MelodyNote[] = [
+export const CHORALE_1_TENOR_2: MelodyNote[] = [
   h(57, "du"), h(55, "jour ;"),
   h(57, "por"), h(57, "te"),
   h(57, "ta"), h(59, "voix"),
@@ -127,36 +133,6 @@ export const MELODIES: Melody[] = [
       frag("Phrase A", [55, 57, 59, 60, 59, 57, 60, 55]),
       frag("Phrase B", [60, 59, 57, 55, 57, 60, 62, 60]),
       frag("Phrase C", [55, 59, 57, 60, 62, 60, 59, 55]),
-    ],
-  },
-  {
-    id: "tenor-line-1",
-    name: "Ligne de ténor, phrase 1",
-    bpm: 72,
-    beatsPerBar: 4,
-    mode: "song",
-    text: "Chante, mon cœur, la lumière",
-    phrases: [{ label: "Phrase 1", notes: TENOR_LINE_PHRASE_1 }],
-  },
-  {
-    id: "tenor-line-2",
-    name: "Ligne de ténor, phrase 2",
-    bpm: 72,
-    beatsPerBar: 4,
-    mode: "song",
-    text: "du jour ; porte ta voix loin.",
-    phrases: [{ label: "Phrase 2", notes: TENOR_LINE_PHRASE_2 }],
-  },
-  {
-    id: "tenor-line-full",
-    name: "Ligne de ténor complète",
-    bpm: 72,
-    beatsPerBar: 4,
-    mode: "song",
-    text: "Chante, mon cœur, la lumière du jour ; porte ta voix loin.",
-    phrases: [
-      { label: "Phrase 1", notes: TENOR_LINE_PHRASE_1 },
-      { label: "Phrase 2", notes: TENOR_LINE_PHRASE_2 },
     ],
   },
 ];

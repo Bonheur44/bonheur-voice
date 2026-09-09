@@ -4,8 +4,8 @@ import { SKILLS, SKILL_ORDER } from "@/lib/skills";
 import { EXERCISES } from "@/data/exercises";
 
 export const metadata = {
-  title: "Vocal Training — Tenor",
-  description: "Routine vocale quotidienne, progressive et personnalisée, pensée pour les ténors de chorale.",
+  title: "Vocal Training — Coach vocal choral",
+  description: "Routine vocale quotidienne et progressive pour choristes, adaptée à la voix réelle de chacun : soprano, alto, ténor, basse.",
 };
 
 const STEPS = [
@@ -25,7 +25,7 @@ export default function LandingPage() {
           </div>
           <div>
             <div className="text-sm font-semibold leading-tight">Vocal Training</div>
-            <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Tenor</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Coach choral</div>
           </div>
         </div>
         <Link href="/login" className="text-sm font-medium text-fg-muted hover:text-fg">
@@ -34,7 +34,7 @@ export default function LandingPage() {
       </header>
 
       <section className="py-10 sm:py-16 animate-rise">
-        <Eyebrow>Chorale · pupitre de ténors</Eyebrow>
+        <Eyebrow>Chorale · tous les pupitres</Eyebrow>
         <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
           Progresser un peu,
           <br />
@@ -42,7 +42,8 @@ export default function LandingPage() {
         </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-fg-muted sm:text-lg">
           Une routine vocale courte et progressive : le souffle, la note qui ne tremble plus, la justesse, l&apos;articulation, les registres, et
-          surtout tenir sa ligne de ténor quand les autres voix chantent autre chose.
+          surtout tenir sa propre ligne quand les autres voix chantent autre chose. Les tonalités s&apos;adaptent à ta voix, pas à
+          l&apos;étiquette de ton pupitre.
         </p>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <LinkButton href="/login" size="xl">
@@ -53,7 +54,8 @@ export default function LandingPage() {
           </LinkButton>
         </div>
         <p className="mt-4 text-xs text-fg-subtle">
-          {EXERCISES.length} exercices, {SKILL_ORDER.length} compétences suivies, séances de 10 à 45 minutes.
+          {EXERCISES.length} exercices, {SKILL_ORDER.length} compétences suivies, séances de 10 à 45 minutes. Soprano, mezzo, alto,
+          contre-ténor, ténor, baryton, basse.
         </p>
       </section>
 
@@ -93,7 +95,7 @@ export default function LandingPage() {
         <Card className="border-accent/25">
           <h2 className="text-lg font-semibold tracking-tight">Le mode chorale</h2>
           <p className="mt-2 text-sm leading-relaxed text-fg-muted">
-            Ta ligne de ténor est jouée seule, puis accompagnée d&apos;une voix, puis de trois. Le volume de ta propre ligne baisse progressivement
+            Ta ligne est jouée seule, puis accompagnée d&apos;une voix, puis de trois. Le volume de ta propre ligne baisse progressivement
             jusqu&apos;à disparaître, pendant que soprano, alto et basse continuent. C&apos;est l&apos;entraînement direct de ce qui manque le plus en
             répétition : garder sa ligne sans se laisser attirer par les autres.
           </p>
@@ -126,7 +128,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="pt-10 text-center text-[11px] text-fg-subtle">Vocal Training — Tenor · outil d&apos;entraînement vocal personnel</footer>
+      <footer className="pt-10 text-center text-[11px] text-fg-subtle">Vocal Training · outil d&apos;entraînement vocal personnel</footer>
     </div>
   );
 }

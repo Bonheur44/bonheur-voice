@@ -6,14 +6,18 @@ import { ExerciseBody, ExerciseHeader } from "@/components/exercises/ExerciseDet
 import { InteractiveWidget } from "@/components/exercises/InteractiveWidget";
 import { Button, Card, Eyebrow } from "@/components/ui";
 import { getExercise } from "@/data/exercises";
+import { usePersonalizedExercise } from "@/components/exercises/usePersonalized";
 import { useAppStore } from "@/lib/store";
 import { useHydrated } from "@/lib/store/hooks";
 import type { Exercise } from "@/lib/types";
 import { FEEDBACK_LABELS } from "@/lib/skills";
 import { formatDayKey } from "@/lib/utils";
 
-export function ExerciseView({ exercise }: { exercise: Exercise }) {
+export function ExerciseView({ exercise: raw }: { exercise: Exercise }) {
   const hydrated = useHydrated();
+  // Les exercices choraux sont écrits en rôles : ils prennent le nom de la ligne
+  // réellement travaillée au moment de l'affichage.
+  const exercise = usePersonalizedExercise(raw) ?? raw;
   const sessions = useAppStore((s) => s.sessions);
   const [trying, setTrying] = useState(false);
 

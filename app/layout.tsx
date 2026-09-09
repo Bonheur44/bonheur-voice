@@ -8,9 +8,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Vocal Training — Tenor", template: "%s · Vocal Training" },
-  description: "Routine vocale personnalisée et progressive pour ténor de chorale.",
-  applicationName: "Vocal Training — Tenor",
+  title: { default: "Vocal Training — Coach vocal choral", template: "%s · Vocal Training" },
+  description: "Routine vocale personnalisée et progressive pour choristes, adaptée à la voix réelle de chacun.",
+  applicationName: "Vocal Training",
 };
 
 export const viewport: Viewport = {

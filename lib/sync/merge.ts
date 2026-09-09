@@ -1,5 +1,7 @@
 import type { AppData, Achievement, Session, SkillId, SkillState, UserProfile } from "@/lib/types";
 import { SKILLS } from "@/lib/skills";
+import { trimObservations } from "@/lib/vocal/observations";
+import type { VocalObservation } from "@/lib/vocal/types";
 
 /**
  * Fusion de deux instantanés de progression, l'un local, l'autre distant.
@@ -73,6 +75,20 @@ export function mergeSessions(local: Session[], remote: Session[]): Session[] {
   return [...byId.values()].sort((a, b) => (a.date === b.date ? stamp(a.updatedAt).localeCompare(stamp(b.updatedAt)) : a.date.localeCompare(b.date)));
 }
 
+/**
+ * Union des observations vocales.
+ *
+ * Elles ne sont jamais modifiées après coup : une tentative appartient à un
+ * instant précis. Une fusion par identifiant suffit donc, sans arbitrage — et
+ * c'est ce qui permet à deux appareils d'enrichir le même profil sans que l'un
+ * efface le travail de l'autre.
+ */
+export function mergeObservations(local: VocalObservation[] = [], remote: VocalObservation[] = []): VocalObservation[] {
+  const byId = new Map<string, VocalObservation>();
+  for (const o of [...(remote ?? []), ...(local ?? [])]) byId.set(o.id, o);
+  return trimObservations([...byId.values()]);
+}
+
 /** Union des objectifs ; en cas de doublon, on retient la première obtention. */
 export function mergeAchievements(local: Achievement[], remote: Achievement[]): Achievement[] {
   const byId = new Map<string, Achievement>();
@@ -115,6 +131,7 @@ export interface RemoteSnapshot {
   skills: Partial<Record<SkillId, SkillState>>;
   sessions: Session[];
   achievements: Achievement[];
+  observations: VocalObservation[];
 }
 
 /** Fusionne l'état local et l'état distant en un seul instantané cohérent. */
@@ -128,5 +145,6 @@ export function mergeSnapshots(local: AppData, remote: RemoteSnapshot, today: st
     sessions,
     currentSession,
     achievements: mergeAchievements(local.achievements, remote.achievements),
+    observations: mergeObservations(local.observations, remote.observations),
   };
 }

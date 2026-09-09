@@ -37,7 +37,7 @@ export function InteractiveWidget({ spec, running = true }: { spec: InteractiveS
     case "melody":
       return <MelodyLearner melodyId={spec.melodyId} />;
     case "choir":
-      return <ChoirMode pieceId={spec.pieceId} initialVoices={spec.voices} initialTenorVolume={spec.tenorVolume} transpose={spec.transpose} listenOnly={spec.listenOnly} />;
+      return <ChoirMode pieceId={spec.pieceId} others={spec.others} myVolume={spec.myVolume} transpose={spec.transpose} listenOnly={spec.listenOnly} />;
     case "piano":
       return <Piano from={Math.max(36, low - 5)} to={Math.min(84, high + 5)} lowMark={low} highMark={high} />;
     default:

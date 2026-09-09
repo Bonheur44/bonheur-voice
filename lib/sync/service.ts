@@ -2,12 +2,12 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { AchievementRow, ProfileRow, RemoteBundle, SessionRow, SkillRow } from "@/lib/supabase/types";
+import type { AchievementRow, ObservationRow, ProfileRow, RemoteBundle, SessionRow, SkillRow } from "@/lib/supabase/types";
 import { snapshot, useAppStore } from "@/lib/store";
 import type { AppData } from "@/lib/types";
 import { toDayKey } from "@/lib/utils";
 import { mergeSnapshots } from "./merge";
-import { achievementsToRows, bundleToSnapshot, profileToRow, sessionsToRows, skillsToRows } from "./rows";
+import { achievementsToRows, bundleToSnapshot, observationsToRows, profileToRow, sessionsToRows, skillsToRows } from "./rows";
 
 export type SyncStatus = "idle" | "loading" | "syncing" | "synced" | "offline" | "error";
 
@@ -91,19 +91,21 @@ class SyncService {
 
   private async fetchBundle(userId: string): Promise<RemoteBundle> {
     const db = this.client();
-    const [profile, skills, sessions, achievements] = await Promise.all([
+    const [profile, skills, sessions, achievements, observations] = await Promise.all([
       db.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
       db.from("skills").select("*").eq("user_id", userId),
       db.from("sessions").select("*").eq("user_id", userId),
       db.from("achievements").select("*").eq("user_id", userId),
+      db.from("observations").select("*").eq("user_id", userId).order("observed_at", { ascending: false }).limit(400),
     ]);
-    const failure = profile.error ?? skills.error ?? sessions.error ?? achievements.error;
+    const failure = profile.error ?? skills.error ?? sessions.error ?? achievements.error ?? observations.error;
     if (failure) throw new Error(failure.message);
     return {
       profile: (profile.data as ProfileRow | null) ?? null,
       skills: (skills.data as SkillRow[]) ?? [],
       sessions: (sessions.data as SessionRow[]) ?? [],
       achievements: (achievements.data as AchievementRow[]) ?? [],
+      observations: (observations.data as ObservationRow[]) ?? [],
     };
   }
 
@@ -155,6 +157,7 @@ class SyncService {
       if (payload.skills.length) writes.push(db.from("skills").upsert(payload.skills, { onConflict: "user_id,skill_id" }));
       if (payload.sessions.length) writes.push(db.from("sessions").upsert(payload.sessions, { onConflict: "user_id,id" }));
       if (payload.achievements.length) writes.push(db.from("achievements").upsert(payload.achievements, { onConflict: "user_id,achievement_id" }));
+      if (payload.observations.length) writes.push(db.from("observations").upsert(payload.observations, { onConflict: "user_id,id" }));
 
       const results = await Promise.all(writes);
       const failure = results.find((r) => r.error !== null)?.error;
@@ -179,6 +182,7 @@ class SyncService {
       db.from("sessions").delete().eq("user_id", userId),
       db.from("skills").delete().eq("user_id", userId),
       db.from("achievements").delete().eq("user_id", userId),
+      db.from("observations").delete().eq("user_id", userId),
     ]);
     this.lastPushedSignature = "";
   }
@@ -201,6 +205,7 @@ interface Payload {
   skills: SkillRow[];
   sessions: SessionRow[];
   achievements: AchievementRow[];
+  observations: ObservationRow[];
 }
 
 function buildPayload(data: AppData, userId: string): Payload {
@@ -209,6 +214,7 @@ function buildPayload(data: AppData, userId: string): Payload {
     skills: skillsToRows(data.skills, userId),
     sessions: sessionsToRows(data, userId),
     achievements: achievementsToRows(data, userId),
+    observations: observationsToRows(data, userId),
   };
 }
 

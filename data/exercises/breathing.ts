@@ -198,7 +198,7 @@ export const breathingExercises: Exercise[] = [
     objective: "Décider à l'avance où respirer dans une phrase musicale et s'y tenir.",
     why: "Une des difficultés que tu décris est de savoir quand respirer. Ce n'est pas une question de réflexe mais de plan : on marque les respirations avant de chanter, puis on les respecte.",
     instructions: [
-      "Écoute la phrase de ténor jouée par l'application (4 mesures).",
+      "Écoute la phrase jouée par l'application (4 mesures), transposée dans ta zone de travail.",
       "Identifie le point de respiration : à la fin de la 2e mesure, il y a une note longue. On respire juste après.",
       "Chante la phrase sur « nou » en respirant uniquement à l'endroit prévu.",
       "Anticipe : commence à préparer l'inspiration pendant la dernière note avant la respiration, sans la raccourcir exagérément.",

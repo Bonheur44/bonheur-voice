@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Segmented } from "@/components/ui";
 import { WidgetFrame, useRange } from "./common";
-import { MELODIES_BY_ID } from "@/data/music/melodies";
+import { resolveMelody } from "@/data/music/myLine";
+import { useAppStore } from "@/lib/store";
 import { playTimeline } from "@/lib/audio/engine";
 import { midiToName } from "@/lib/audio/notes";
 import { fitShift, melodyToTimeline } from "@/lib/audio/transpose";
@@ -13,7 +14,10 @@ type Mode = "note" | "phrase" | "all";
 
 /** Apprentissage d'une mélodie : note par note, phrase par phrase, ou en entier. */
 export function MelodyLearner({ melodyId, transpose = 0 }: { melodyId: string; transpose?: number }) {
-  const melody = MELODIES_BY_ID[melodyId];
+  // « ma ligne » est résolue depuis le choral selon la ligne travaillée : le même
+  // exercice sert ainsi aux quatre pupitres sans dupliquer les données.
+  const line = useAppStore((s) => s.profile.choirLine);
+  const melody = useMemo(() => resolveMelody(melodyId, line), [melodyId, line]);
   const { low, high } = useRange();
   const [mode, setMode] = useState<Mode>(melody?.mode === "fragments" ? "phrase" : "phrase");
   const [phraseIdx, setPhraseIdx] = useState(0);

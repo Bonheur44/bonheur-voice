@@ -131,7 +131,7 @@ export const musicalityExercises: Exercise[] = [
     objective: "Réunir legato, phrasé, résonance et texte sur une phrase complète.",
     why: "C'est l'exercice de synthèse : tout ce que tu as travaillé séparément doit tenir ensemble sur une vraie phrase, comme en chorale.",
     instructions: [
-      "Écoute la phrase jouée (ligne de ténor, 8 mesures).",
+      "Écoute la phrase jouée (ta ligne du choral, 8 mesures).",
       "Chante-la d'abord sur voyelles seules, legato, avec la forme (crescendo vers le sommet).",
       "Ajoute le texte : « Chante, mon cœur, la lumière du jour ; porte ta voix loin ». Consonnes rapides, voyelles longues.",
       "Chante-la trois fois de suite en cherchant à chaque fois plus de continuité.",
@@ -146,7 +146,7 @@ export const musicalityExercises: Exercise[] = [
     difficulty: 4,
     level: 3,
     prerequisites: ["mus-phrase-shape", "art-text-legato"],
-    interactive: { type: "melody", melodyId: "tenor-line-full" },
+    interactive: { type: "melody", melodyId: "my-line-full" },
     tags: ["synthèse"],
   },
 ];

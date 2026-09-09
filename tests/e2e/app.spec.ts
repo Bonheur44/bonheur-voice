@@ -46,19 +46,20 @@ async function completeOnboarding(page: Page) {
   await expect(page).toHaveURL(/\/onboarding/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("coach vocal");
   await page.getByRole("button", { name: "Continuer →" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("zone confortable");
-  // choisir une note basse et une note haute au piano
-  await page.getByRole("button", { name: "Ré3", exact: true }).dispatchEvent("pointerdown");
-  await page.getByRole("tab", { name: /Haute/ }).click();
-  await page.getByRole("button", { name: "La4", exact: true }).dispatchEvent("pointerdown");
-  await expect(page.getByText("Zone : Ré3 → La4")).toBeVisible();
+  // Pupitre déclaré : un point de départ, pas une conclusion.
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Où en es-tu");
+  await page.getByRole("tab", { name: "Oui", exact: true }).click();
+  await page.getByRole("button", { name: "Ténor", exact: true }).click();
   await page.getByRole("button", { name: "Continuer →" }).click();
   await page.getByRole("tab", { name: "15 min" }).click();
-  await page.getByRole("button", { name: /C'est parti/ }).click();
+  await page.getByRole("button", { name: "Continuer →" }).click();
+  // L'évaluation est proposée, jamais imposée.
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("évaluer ta voix");
+  await page.getByRole("button", { name: /Plus tard/ }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 }
 
-test.describe("Vocal Training — Tenor", () => {
+test.describe("Vocal Training — coach vocal choral", () => {
   test("onboarding → dashboard → séance complète → progression → historique", async ({ page }) => {
     const errors = watchConsole(page);
     await completeOnboarding(page);
@@ -214,11 +215,12 @@ test.describe("Vocal Training — Tenor", () => {
     expect(errors, errors.join("\n")).toEqual([]);
   });
 
-  test("réglages : tessiture, niveau manuel, export, réinitialisation", async ({ page }) => {
+  test("réglages : zone de travail, niveau manuel, export, réinitialisation", async ({ page }) => {
     const errors = watchConsole(page);
     await completeOnboarding(page);
     await page.goto("/settings");
-    await expect(page.getByText("Ré3 → La4")).toBeVisible();
+    // Zone de travail issue du pupitre déclaré, tant qu'aucune évaluation n'a eu lieu.
+    await expect(page.getByText("Do3 → Sol4")).toBeVisible();
     await page.getByRole("tab", { name: /3 · Indépendance/ }).click();
     await page.goto("/dashboard");
     await expect(page.getByText("Niveau 3 · Indépendance")).toBeVisible();

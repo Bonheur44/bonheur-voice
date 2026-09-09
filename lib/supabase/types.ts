@@ -3,7 +3,11 @@
 export interface ProfileRow {
   user_id: string;
   display_name: string | null;
-  voice_type: string;
+  /** Pupitre déclaré, « unknown » compris. Jamais une conclusion de l'application. */
+  declared_part: string;
+  /** Ligne SATB travaillée. */
+  choir_line: string;
+  range_from_assessment: boolean;
   low_note: number;
   high_note: number;
   preferred_duration: number;
@@ -44,9 +48,24 @@ export interface AchievementRow {
   unlocked_at: string;
 }
 
+/** Une tentative vocale. Append-only : jamais modifiée, seulement ajoutée ou oubliée. */
+export interface ObservationRow {
+  id: string;
+  user_id: string;
+  target_midi: number;
+  detected_midi: number | null;
+  spread_cents: number;
+  held_seconds: number;
+  clarity: number;
+  comfort: string | null;
+  source: string;
+  observed_at: string;
+}
+
 export interface RemoteBundle {
   profile: ProfileRow | null;
   skills: SkillRow[];
   sessions: SessionRow[];
   achievements: AchievementRow[];
+  observations: ObservationRow[];
 }

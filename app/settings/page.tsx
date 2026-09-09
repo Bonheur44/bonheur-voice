@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { Piano } from "@/components/audio/Piano";
 import { Button, Callout, Card, Eyebrow, SectionTitle, Segmented, Slider, Spinner } from "@/components/ui";
@@ -13,6 +14,8 @@ import { exportData, useAppStore } from "@/lib/store";
 import { syncService } from "@/lib/sync/service";
 import { useHydrated } from "@/lib/store/hooks";
 import type { AppData, Level } from "@/lib/types";
+import { CHOIR_LINES, CHOIR_LINE_IDS, DECLARED_PART_OPTIONS, defaultLineFor } from "@/lib/vocal/voiceParts";
+import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const hydrated = useHydrated();
@@ -74,9 +77,47 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <SectionTitle>Zone confortable</SectionTitle>
+        <SectionTitle>Pupitre et ligne travaillée</SectionTitle>
         <p className="mb-3 text-sm text-fg-muted">
-          Les exercices ne dépassent jamais cette zone. Marque la note la plus basse et la plus haute que tu tiens <strong>sans effort</strong>, pas ta limite absolue.
+          Le pupitre déclaré sert de point de départ, jamais de conclusion : c&apos;est l&apos;
+          <Link href="/assessment" className="underline underline-offset-2">évaluation</Link> qui décrit ta voix.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {DECLARED_PART_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => updateProfile({ declaredPart: option.value, choirLine: defaultLineFor(option.value) })}
+              aria-pressed={profile.declaredPart === option.value}
+              className={cn(
+                "rounded-xl border px-3 py-2 text-sm font-medium transition-colors",
+                profile.declaredPart === option.value
+                  ? "border-accent bg-accent-soft text-accent-strong"
+                  : "border-border-strong text-fg-muted hover:text-fg",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4">
+          <div className="mb-2 text-sm font-medium">Ligne travaillée dans les exercices choraux</div>
+          <Segmented
+            options={CHOIR_LINE_IDS.map((id) => ({ value: id, label: CHOIR_LINES[id].label }))}
+            value={profile.choirLine}
+            onChange={(v) => updateProfile({ choirLine: v })}
+          />
+          <p className="mt-2 text-xs text-fg-subtle">
+            Modifiable indépendamment du pupitre : selon les pièces, un même choriste ne chante pas toujours la même ligne.
+          </p>
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle>Zone de travail</SectionTitle>
+        <p className="mb-3 text-sm text-fg-muted">
+          Les exercices ne dépassent jamais cette zone, et s&apos;y transposent automatiquement. Marque la note la plus basse et la plus haute que tu tiens <strong>sans effort</strong>, pas ta limite absolue.
+          {profile.rangeFromAssessment && " Elle vient actuellement de ton évaluation ; la modifier à la main la remplacera."}
         </p>
         <Segmented
           options={[
@@ -88,13 +129,13 @@ export default function SettingsPage() {
           className="mb-3"
         />
         <Piano
-          from={40}
-          to={76}
+          from={Math.min(36, profile.lowNote - 3)}
+          to={Math.max(88, profile.highNote + 3)}
           lowMark={profile.lowNote}
           highMark={profile.highNote}
           onPress={(m) => {
-            if (picking === "low") updateProfile({ lowNote: Math.min(m, profile.highNote - 5) });
-            else updateProfile({ highNote: Math.max(m, profile.lowNote + 5) });
+            if (picking === "low") updateProfile({ lowNote: Math.min(m, profile.highNote - 5), rangeFromAssessment: false });
+            else updateProfile({ highNote: Math.max(m, profile.lowNote + 5), rangeFromAssessment: false });
           }}
         />
         <p className="mt-2 text-xs text-fg-subtle">

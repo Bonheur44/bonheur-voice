@@ -12,6 +12,20 @@ export default function ToolsPage() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Outils musicaux</h1>
         <p className="mt-1 text-sm text-fg-muted">Pour travailler librement, préparer une répétition ou vérifier une note.</p>
       </div>
+      <Link
+        href="/assessment"
+        className="flex items-start gap-4 rounded-2xl border border-accent/40 bg-accent-soft p-4 transition-colors hover:border-accent"
+      >
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-bg-elevated text-xl">📐</div>
+        <div>
+          <div className="font-semibold">Évaluer ma voix</div>
+          <div className="mt-0.5 text-sm text-fg-muted">
+            Étendue, zone fiable, zone confortable, profil vocal estimé. C&apos;est ce qui adapte les tonalités de tes exercices à
+            ta voix réelle.
+          </div>
+        </div>
+      </Link>
+
       <ul className="grid gap-3 sm:grid-cols-2">
         {TOOLS.map((t) => (
           <li key={t.id}>

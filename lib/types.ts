@@ -1,3 +1,5 @@
+import type { ChoirLine, DeclaredPart, VocalObservation } from "@/lib/vocal/types";
+
 export type SkillId =
   | "breathing"
   | "warmup"
@@ -24,8 +26,17 @@ export type InteractiveSpec =
   | { type: "interval"; intervals: number[] }
   | { type: "scale"; pattern: ScalePatternId; bpm?: number; /** décalage en demi-tons du point de départ par rapport à la note basse confortable */ startOffset?: number }
   | { type: "melody"; melodyId: string }
-  | { type: "choir"; pieceId: string; listenOnly?: boolean; voices?: Array<"S" | "A" | "B">; tenorVolume?: number; transpose?: number }
+  | { type: "choir"; pieceId: string; listenOnly?: boolean; others?: ChoirVoicing; myVolume?: number; transpose?: number }
   | { type: "piano" };
+
+/**
+ * Quelles autres voix accompagnent la ligne travaillée.
+ *
+ * Exprimé en rôles et non en lettres SATB : un exercice « ma ligne face à la voix
+ * qui attire l'oreille » doit rester le même exercice, que l'utilisateur chante
+ * ténor ou basse. Les rôles sont résolus dans `lib/vocal/voiceParts.ts`.
+ */
+export type ChoirVoicing = "none" | "support" | "attractor" | "except-attractor" | "all";
 
 export type ScalePatternId = "three" | "scale5" | "scale8" | "arpeggio" | "siren" | "thirds";
 
@@ -90,13 +101,25 @@ export interface SkillState {
 }
 
 export interface UserProfile {
-  voiceType: "tenor";
+  /**
+   * Pupitre déclaré par l'utilisateur.
+   *
+   * C'est une information de contexte, jamais une vérité vocale : elle sert à
+   * amorcer le test d'étendue et à choisir la ligne travaillée, et n'entre dans
+   * aucun calcul de profil vocal. Ce que les données indiquent vit dans
+   * `VocalAnalysis`, dérivé des observations.
+   */
+  declaredPart: DeclaredPart;
+  /** Ligne travaillée dans les exercices choraux. Modifiable indépendamment du pupitre. */
+  choirLine: ChoirLine;
   /** Nom affiché, repris du compte Google ou saisi à l'inscription. */
   displayName?: string;
-  /** Note MIDI la plus basse confortable. */
+  /** Note MIDI la plus basse de la zone de travail. */
   lowNote: number;
-  /** Note MIDI la plus haute confortable. */
+  /** Note MIDI la plus haute de la zone de travail. */
   highNote: number;
+  /** Vrai quand la zone de travail vient d'une évaluation plutôt que d'un réglage manuel. */
+  rangeFromAssessment?: boolean;
   preferredDuration: number;
   level: Level;
   manualLevel?: Level;
@@ -118,6 +141,12 @@ export interface AppData {
   sessions: Session[];
   currentSession: Session | null;
   achievements: Achievement[];
+  /**
+   * Tentatives vocales observées. Seule matière première du profil vocal :
+   * les bandes, estimations et niveaux de confiance en sont recalculés à
+   * chaque affichage, jamais stockés.
+   */
+  observations: VocalObservation[];
 }
 
 export interface Recommendation {

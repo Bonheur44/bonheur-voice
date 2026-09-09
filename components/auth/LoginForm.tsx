@@ -118,7 +118,7 @@ export function LoginForm() {
         <Logo />
         <div>
           <div className="text-sm font-semibold leading-tight">Vocal Training</div>
-          <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Tenor</div>
+          <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Coach choral</div>
         </div>
       </Link>
 

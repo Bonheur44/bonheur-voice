@@ -88,8 +88,8 @@ export const pitchExercises: Exercise[] = [
     id: "pitch-intervals-basic",
     name: "Intervalles : 2de, 3ce, 5te, 8ve",
     category: "pitch",
-    objective: "Reconnaître à l'oreille les intervalles les plus fréquents des lignes de ténor.",
-    why: "Une ligne de ténor est faite d'intervalles. Quand tu reconnais la seconde, la tierce, la quinte et l'octave, tu peux « lire » une mélodie à l'oreille au lieu de la deviner note par note.",
+    objective: "Reconnaître à l'oreille les intervalles les plus fréquents des lignes de chœur.",
+    why: "Une ligne de chœur est faite d'intervalles. Quand tu reconnais la seconde, la tierce, la quinte et l'octave, tu peux « lire » une mélodie à l'oreille au lieu de la deviner note par note.",
     instructions: [
       "Deux notes sont jouées : une de référence puis une seconde.",
       "Choisis l'intervalle parmi les propositions.",
@@ -138,7 +138,7 @@ export const pitchExercises: Exercise[] = [
     name: "Intervalles : 4te, 6te, 7e, triton",
     category: "pitch",
     objective: "Étendre la reconnaissance aux intervalles moins évidents.",
-    why: "Les lignes intérieures (alto, ténor) font beaucoup de quartes, de sixtes et parfois des sauts inattendus. Les reconnaître te permet de retenir ta ligne beaucoup plus vite.",
+    why: "Les lignes intérieures — alto et ténor — font beaucoup de quartes, de sixtes et parfois des sauts inattendus, parce qu'elles complètent l'harmonie plutôt que de porter la mélodie. Les reconnaître te permet de retenir ta ligne beaucoup plus vite.",
     instructions: [
       "Deux notes sont jouées ; choisis l'intervalle.",
       "Repères : quarte = « À la claire fontaine » ; sixte majeure = « My Bonnie » ; septième majeure : très tendue, veut monter à l'octave.",

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Callout } from "@/components/ui";
+import { foldCents } from "@/lib/audio/notes";
 import { getPitchDetector, isMicSupported, type PitchFrame } from "@/lib/audio/pitch-detector";
 import { useAppStore } from "@/lib/store";
 
@@ -110,10 +111,4 @@ export function LevelMeter({ level }: { level: number }) {
   );
 }
 
-/** Écart en cents ramené dans [-600, 600] (tolérance d'octave). */
-export function foldCents(cents: number): number {
-  let c = cents;
-  while (c > 600) c -= 1200;
-  while (c < -600) c += 1200;
-  return c;
-}
+export { foldCents };

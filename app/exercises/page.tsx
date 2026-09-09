@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge, Eyebrow } from "@/components/ui";
 import { EXERCISES } from "@/data/exercises";
+import { usePersonalizedExercises } from "@/components/exercises/usePersonalized";
 import { SKILLS, SKILL_ORDER } from "@/lib/skills";
 import { useLevel } from "@/lib/store/hooks";
 import type { SkillId } from "@/lib/types";
@@ -16,10 +17,12 @@ export default function ExercisesPage() {
   const [cat, setCat] = useState<SkillId | "all">("all");
   const [q, setQ] = useState("");
 
+  const catalogue = usePersonalizedExercises(EXERCISES);
+
   const list = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return EXERCISES.filter((e) => (cat === "all" || e.category === cat) && (!query || e.name.toLowerCase().includes(query) || e.objective.toLowerCase().includes(query) || e.tags?.some((t) => t.includes(query))));
-  }, [cat, q]);
+    return catalogue.filter((e) => (cat === "all" || e.category === cat) && (!query || e.name.toLowerCase().includes(query) || e.objective.toLowerCase().includes(query) || e.tags?.some((t) => t.includes(query))));
+  }, [catalogue, cat, q]);
 
   const grouped = useMemo(() => {
     const map = new Map<SkillId, typeof list>();
