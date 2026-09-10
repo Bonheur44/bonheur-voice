@@ -3,13 +3,8 @@
 import { useEffect, useRef } from "react";
 import { getAudioEngine, type PlayingNote } from "@/lib/audio/engine";
 import { isBlackKey, midiToName } from "@/lib/audio/notes";
+import { KEY_SOUNDING_SECONDS } from "@/lib/audio/timbres";
 import { cn } from "@/lib/utils";
-
-/**
- * Durée minimale de résonance d'une touche, en secondes.
- * Assez pour reconnaître la note et la chanter, sans traîner d'une touche à l'autre.
- */
-const MIN_SOUNDING = 3;
 
 export function Piano({
   from = 48,
@@ -50,7 +45,7 @@ export function Piano({
   const down = (midi: number) => {
     const eng = getAudioEngine();
     playing.current.get(midi)?.stop();
-    const note = eng.start(midi, "piano", undefined, 1, MIN_SOUNDING);
+    const note = eng.start(midi, "piano", undefined, 1, KEY_SOUNDING_SECONDS);
     playing.current.set(midi, note);
     held.current.set(midi, note);
     onPress?.(midi);

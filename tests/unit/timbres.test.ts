@@ -4,6 +4,7 @@ import {
   DEFAULT_VOICE_SET,
   INSTRUMENTS,
   INSTRUMENT_IDS,
+  KEY_SOUNDING_SECONDS,
   VOICE_PARTS,
   VOICE_SETS,
   VOICE_SET_IDS,
@@ -120,10 +121,25 @@ describe("enveloppe", () => {
     expect(envelopeLevel(INSTRUMENTS.sine.config, 30)).toBe(1);
   });
 
-  it.each(INSTRUMENT_IDS)("le préréglage %s s'entend encore après trois secondes", (id) => {
+  it.each(INSTRUMENT_IDS)("le préréglage %s s'entend jusqu'au bout de la résonance", (id) => {
     // C'est la promesse faite à l'utilisateur : une touche effleurée reste
-    // audible quelques secondes. Un dixième du sommet reste nettement perceptible.
-    expect(envelopeLevel(INSTRUMENTS[id].config, 3)).toBeGreaterThanOrEqual(0.1);
+    // audible jusqu'à la fin. Un dixième du sommet reste nettement perceptible.
+    expect(envelopeLevel(INSTRUMENTS[id].config, KEY_SOUNDING_SECONDS)).toBeGreaterThanOrEqual(0.1);
+  });
+
+  it("s'est assez éteint au moment de la coupure pour qu'elle ne s'entende pas", () => {
+    // L'autre moitié du réglage : couper une note encore proche du sommet fait
+    // un clic. À la fin de la résonance, la chute doit avoir fait son travail.
+    for (const id of INSTRUMENT_IDS) {
+      const cfg = INSTRUMENTS[id].config;
+      if ((cfg.sustain ?? 1) >= 1) continue; // timbres tenus : coupés net par nature
+      expect(envelopeLevel(cfg, KEY_SOUNDING_SECONDS), id).toBeLessThan(0.3);
+    }
+  });
+
+  it("fait résonner la touche assez longtemps pour la reconnaître, sans traîner", () => {
+    expect(KEY_SOUNDING_SECONDS).toBeGreaterThanOrEqual(1);
+    expect(KEY_SOUNDING_SECONDS).toBeLessThanOrEqual(2);
   });
 
   it("le bourdon ne s'éteint jamais, quel que soit l'instrument", () => {
