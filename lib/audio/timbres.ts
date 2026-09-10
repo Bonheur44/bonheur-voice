@@ -30,6 +30,25 @@ export interface TimbreConfig {
   gain: number;
 }
 
+/**
+ * Niveau de l'enveloppe à un instant donné, exprimé en fraction du sommet.
+ *
+ * Fonction pure, volontairement séparée du moteur audio : c'est elle qui décide
+ * si une note s'entend encore au bout de trois secondes, et cela doit pouvoir se
+ * vérifier sans navigateur. Elle reproduit exactement l'interpolation
+ * exponentielle appliquée par la Web Audio API entre le sommet et le niveau de
+ * tenue.
+ */
+export function envelopeLevel(cfg: TimbreConfig, elapsed: number): number {
+  if (elapsed <= cfg.attack) return 1;
+  const decay = cfg.decay ?? 0;
+  const sustain = cfg.sustain ?? 1;
+  if (decay <= 0 || sustain >= 1) return 1;
+  const floor = Math.max(sustain, 0.0001);
+  if (elapsed >= cfg.attack + decay) return floor;
+  return Math.pow(floor, (elapsed - cfg.attack) / decay);
+}
+
 export type VoicePartId = "S" | "A" | "T" | "B";
 export type Role = "piano" | "drone" | "click" | VoicePartId;
 
@@ -51,19 +70,22 @@ export const INSTRUMENTS: Record<InstrumentId, InstrumentPreset> = {
     id: "piano",
     label: "Piano doux",
     description: "Timbre par défaut, proche d'un piano droit. Bon compromis pour tout travailler.",
-    config: { osc: "triangle", osc2: "sine", osc2Gain: 0.5, cutoff: 4200, attack: 0.004, decay: 0.9, sustain: 0.3, release: 0.28, gain: 0.5 },
+    // Chute longue vers un niveau bas, comme une corde qui continue de vibrer :
+    // une note reste audible plusieurs secondes au lieu de se figer à 30 % en
+    // moins d'une seconde.
+    config: { osc: "triangle", osc2: "sine", osc2Gain: 0.5, cutoff: 4200, attack: 0.004, decay: 3.2, sustain: 0.12, release: 0.35, gain: 0.5 },
   },
   bright: {
     id: "bright",
     label: "Piano clair",
     description: "Plus brillant, se détache mieux si tu chantes fort ou dans une pièce sonore.",
-    config: { osc: "sawtooth", osc2: "triangle", osc2Gain: 0.35, cutoff: 5200, attack: 0.003, decay: 0.7, sustain: 0.22, release: 0.22, gain: 0.36 },
+    config: { osc: "sawtooth", osc2: "triangle", osc2Gain: 0.35, cutoff: 5200, attack: 0.003, decay: 2.6, sustain: 0.1, release: 0.28, gain: 0.36 },
   },
   rhodes: {
     id: "rhodes",
     label: "Piano électrique",
     description: "Rond et enveloppant, agréable pour les longues séances.",
-    config: { osc: "sine", osc2: "sine", osc2Gain: 0.45, detune2: 7, cutoff: 2400, attack: 0.01, decay: 1.6, sustain: 0.35, release: 0.5, gain: 0.55 },
+    config: { osc: "sine", osc2: "sine", osc2Gain: 0.45, detune2: 7, cutoff: 2400, attack: 0.01, decay: 4, sustain: 0.16, release: 0.55, gain: 0.55 },
   },
   organ: {
     id: "organ",

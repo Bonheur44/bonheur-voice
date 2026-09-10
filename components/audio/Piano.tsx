@@ -1,9 +1,15 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { getAudioEngine, type PlayingNote } from "@/lib/audio/engine";
 import { isBlackKey, midiToName } from "@/lib/audio/notes";
 import { cn } from "@/lib/utils";
+
+/**
+ * Durée minimale de résonance d'une touche, en secondes.
+ * Assez pour reconnaître la note et la chanter, sans traîner d'une touche à l'autre.
+ */
+const MIN_SOUNDING = 3;
 
 export function Piano({
   from = 48,
@@ -23,6 +29,20 @@ export function Piano({
   className?: string;
 }) {
   const playing = useRef<Map<number, PlayingNote>>(new Map());
+
+  // Une touche relâchée aussitôt doit tout de même s'entendre : on laisse la note
+  // résonner, comme sur un piano dont la corde ne s'arrête pas avec le doigt.
+  const held = useRef<Map<number, PlayingNote>>(new Map());
+  useEffect(
+    () => () => {
+      // Sans cela, une touche encore enfoncée au moment où l'on quitte la page
+      // continuerait de sonner indéfiniment : le relâchement n'arrive jamais.
+      held.current.forEach((n) => n.stop());
+      held.current.clear();
+    },
+    [],
+  );
+
   const keys: number[] = [];
   for (let m = from; m <= to; m++) keys.push(m);
   const whites = keys.filter((k) => !isBlackKey(k));
@@ -30,14 +50,20 @@ export function Piano({
   const down = (midi: number) => {
     const eng = getAudioEngine();
     playing.current.get(midi)?.stop();
-    playing.current.set(midi, eng.start(midi, "piano"));
+    const note = eng.start(midi, "piano", undefined, 1, MIN_SOUNDING);
+    playing.current.set(midi, note);
+    held.current.set(midi, note);
     onPress?.(midi);
   };
+
   const up = (midi: number) => {
     const n = playing.current.get(midi);
     if (n) {
+      // Le moteur repousse l'arrêt jusqu'à la durée minimale : la note continue
+      // de sonner et de décroître seule après cet appel.
       n.stop();
       playing.current.delete(midi);
+      held.current.delete(midi);
     }
   };
 

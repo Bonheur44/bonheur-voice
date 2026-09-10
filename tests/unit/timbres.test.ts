@@ -8,6 +8,7 @@ import {
   VOICE_SETS,
   VOICE_SET_IDS,
   droneFrom,
+  envelopeLevel,
   isInstrumentId,
   isVoiceSetId,
   resolveTimbre,
@@ -86,6 +87,48 @@ describe("banque de voix", () => {
   it("les jeux différenciés donnent une basse plus sombre que la soprano", () => {
     for (const id of VOICE_SET_IDS.filter((v) => v !== "identiques")) {
       expect(VOICE_SETS[id].parts.B.cutoff, id).toBeLessThan(VOICE_SETS[id].parts.S.cutoff);
+    }
+  });
+});
+
+describe("enveloppe", () => {
+  it("part du sommet et n'y revient jamais", () => {
+    const piano = INSTRUMENTS.piano.config;
+    expect(envelopeLevel(piano, 0)).toBe(1);
+    expect(envelopeLevel(piano, 0.5)).toBeLessThan(1);
+  });
+
+  it("décroît sans à-coup, jamais en remontant", () => {
+    const piano = INSTRUMENTS.piano.config;
+    let previous = 1;
+    for (let t = 0.05; t <= 6; t += 0.05) {
+      const level = envelopeLevel(piano, t);
+      expect(level, `t=${t.toFixed(2)}`).toBeLessThanOrEqual(previous + 1e-9);
+      previous = level;
+    }
+  });
+
+  it("atteint le niveau de tenue au bout de la chute, et s'y arrête", () => {
+    const piano = INSTRUMENTS.piano.config;
+    const end = piano.attack + (piano.decay ?? 0);
+    expect(envelopeLevel(piano, end)).toBeCloseTo(piano.sustain ?? 1, 5);
+    expect(envelopeLevel(piano, end + 10)).toBeCloseTo(piano.sustain ?? 1, 5);
+  });
+
+  it("reste au sommet pour un timbre tenu, comme l'orgue", () => {
+    expect(envelopeLevel(INSTRUMENTS.organ.config, 30)).toBe(1);
+    expect(envelopeLevel(INSTRUMENTS.sine.config, 30)).toBe(1);
+  });
+
+  it.each(INSTRUMENT_IDS)("le préréglage %s s'entend encore après trois secondes", (id) => {
+    // C'est la promesse faite à l'utilisateur : une touche effleurée reste
+    // audible quelques secondes. Un dixième du sommet reste nettement perceptible.
+    expect(envelopeLevel(INSTRUMENTS[id].config, 3)).toBeGreaterThanOrEqual(0.1);
+  });
+
+  it("le bourdon ne s'éteint jamais, quel que soit l'instrument", () => {
+    for (const id of INSTRUMENT_IDS) {
+      expect(envelopeLevel(droneFrom(INSTRUMENTS[id].config), 60), id).toBe(1);
     }
   });
 });

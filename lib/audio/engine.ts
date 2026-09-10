@@ -4,6 +4,7 @@ import { midiToFreq } from "./notes";
 import {
   DEFAULT_INSTRUMENT,
   DEFAULT_VOICE_SET,
+  envelopeLevel,
   resolveTimbre,
   type InstrumentId,
   type Role,
@@ -83,7 +84,16 @@ class AudioEngine {
   }
 
   /** Démarre une note ; retourne un handle pour l'arrêter ou changer sa hauteur. */
-  start(midi: number, timbre: Timbre = "piano", when?: number, level = 1): PlayingNote {
+  /**
+   * Démarre une note.
+   *
+   * `minHold` impose une durée minimale de résonance : un appui bref sur une
+   * touche produit malgré tout une note qu'on entend, comme sur un vrai piano où
+   * la corde continue de vibrer. Laissé à zéro, la note s'arrête exactement quand
+   * on le demande — ce qu'il faut pour une gamme ou une ligne chorale, dont les
+   * durées sont calculées.
+   */
+  start(midi: number, timbre: Timbre = "piano", when?: number, level = 1, minHold = 0): PlayingNote {
     const ctx = this.ensure();
     const cfg = resolveTimbre(timbre, this.instrument, this.voiceSet);
     const t0 = when ?? ctx.currentTime;
@@ -141,13 +151,15 @@ class AudioEngine {
 
     oscs.forEach((o) => o.start(t0));
 
+    const attackEnd = t0 + cfg.attack;
+
     const stop = (whenStop?: number) => {
-      const ts = Math.max(whenStop ?? ctx.currentTime, t0 + cfg.attack + 0.001);
-      // On reconstitue le niveau attendu à cet instant plutôt que de lire la valeur
-      // courante : pour une note planifiée à l'avance, celle-ci vaut encore zéro.
-      const levelAtStop = decay > 0 && ts >= decayEnd ? sustain : peak;
+      const ts = Math.max(whenStop ?? ctx.currentTime, attackEnd + 0.001, t0 + minHold);
+      // Le niveau est reconstitué, jamais lu : pour une note planifiée à l'avance,
+      // `out.gain.value` vaut encore zéro. Suivre la courbe évite en plus le
+      // ressaut qu'un simple palier produirait en coupant en pleine chute.
       out.gain.cancelScheduledValues(ts);
-      out.gain.setValueAtTime(levelAtStop, ts);
+      out.gain.setValueAtTime(Math.max(0.0001, peak * envelopeLevel(cfg, ts - t0)), ts);
       out.gain.exponentialRampToValueAtTime(0.0001, ts + cfg.release);
       oscs.forEach((o) => o.stop(ts + cfg.release + 0.05));
       lfo?.stop(ts + cfg.release + 0.05);
