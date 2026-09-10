@@ -1,5 +1,7 @@
 # Vocal Training — coach vocal choral
 
+En ligne : **https://voice-coach-khaki.vercel.app**
+
 Application web de routine vocale personnalisée et progressive pour choristes, tous pupitres. Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Web Audio API, comptes et base de données Supabase.
 
 Chaque choriste se connecte, retrouve sa progression sur tous ses appareils, et ne voit que ses propres données.
@@ -51,7 +53,7 @@ La connexion par mot de passe fonctionne sans cette étape.
 1. Dans la console Google Cloud, créer un identifiant OAuth de type « application web ».
 2. Y ajouter comme URI de redirection autorisée : `https://<ton-projet>.supabase.co/auth/v1/callback`.
 3. Dans Supabase, **Authentication → Providers → Google**, coller l'identifiant et le secret.
-4. Dans Supabase, **Authentication → URL Configuration**, régler le « Site URL » sur `http://localhost:3000` en développement, et ajouter les URL de production dans « Redirect URLs ».
+4. Dans Supabase, **Authentication → URL Configuration**, régler le « Site URL » sur l'adresse de production (`https://voice-coach-khaki.vercel.app`) et ajouter `http://localhost:3000` ainsi que `https://voice-coach-khaki.vercel.app/auth/callback` dans « Redirect URLs ». Sans cela, le retour de Google échoue silencieusement en production.
 
 ### 4. Courriels
 
@@ -95,6 +97,34 @@ Trois conséquences voulues :
 Quatre bandes, volontairement distinctes : l'**étendue explorée** (ce que la voix a produit), la **zone fiable** (reproduit avec justesse et stabilité), la **zone confortable** (sans tension déclarée) et la **zone centrale** (le noyau le plus assuré). Les bandes sont construites par grappes : une note isolée à sept demi-tons du reste — typiquement une erreur d'octave du détecteur — forme sa propre grappe au lieu de doubler l'étendue affichée.
 
 L'estimation de pupitre compare la zone confortable observée à la **tessiture de travail** des sept pupitres, jamais aux notes extrêmes. Elle publie des parts relatives, un niveau de confiance séparé, et répond « plusieurs pupitres compatibles » quand les deux premiers se tiennent à moins de six points. Le contre-ténor est accompagné d'une réserve explicite : la hauteur seule ne le distingue pas d'un alto.
+
+## Déploiement
+
+L'adresse canonique vit dans [`lib/legal/config.ts`](lib/legal/config.ts) (`LEGAL.siteUrl`) et sert trois fois : mentions légales, `metadataBase` des métadonnées, et aperçu de partage. La changer à un seul endroit suffit.
+
+À vérifier avant ou lors du premier déploiement :
+
+- `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` définies dans Vercel — ces variables sont **inlinées à la compilation**, un changement impose un redéploiement ;
+- « Site URL » et « Redirect URLs » de Supabase pointant sur le domaine de production ;
+- URI de redirection du client OAuth Google pointant sur `https://<projet>.supabase.co/auth/v1/callback` ;
+- les deux migrations SQL exécutées.
+
+L'aperçu de partage (`app/opengraph-image.png`, 1200 × 630) est généré à partir de la même marque que les icônes.
+
+## Pages légales
+
+Trois documents publics, accessibles sans compte : mentions légales, politique de confidentialité et conditions d'utilisation, sous `/legal`.
+
+Tout ce qui doit être renseigné par une personne — identité de l'éditeur, adresse de contact, hébergeurs, région du projet — est rassemblé dans [`lib/legal/config.ts`](lib/legal/config.ts). Les valeurs non remplies s'afficheraient entre crochets, pour qu'un oubli se voie au lieu de passer pour une information exacte ; `pendingLegalFields()` en dresse la liste, et un test vérifie qu'elle est vide.
+
+Deux rôles distincts y sont séparés, parce qu'ils relèvent de textes différents :
+
+- l'**hébergeur du site** (Vercel), dont la LCEN impose de publier l'identité et l'adresse postale dans les mentions légales ;
+- les **sous-traitants** au sens du RGPD (Supabase, et Google en cas de connexion Google), qu'il faut nommer dans la politique de confidentialité en indiquant où résident les données — sans obligation de publier leur adresse postale.
+
+Le point d'accès de la base est affiché à partir de `NEXT_PUBLIC_SUPABASE_URL`, dont seul l'hôte est repris. Cette URL est déjà publique par construction : elle figure dans le code envoyé au navigateur, et la sécurité repose sur les règles d'isolation par ligne, non sur son secret.
+
+Passer `publisher.anonymous` à `true` applique le régime non professionnel de la LCEN (article 6 III 2) : un particulier qui ne tire aucun revenu du site peut alors ne publier ni son nom ni son adresse, à condition de les avoir communiqués à son hébergeur.
 
 ## Synchronisation
 

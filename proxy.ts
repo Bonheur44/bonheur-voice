@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/config";
+import { isPublicPath } from "@/lib/routes";
 
 /**
  * Intercepteur de requêtes (convention `proxy.ts` de Next 16, qui remplace `middleware.ts`).
@@ -8,13 +9,6 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/sup
  * Deux rôles : rafraîchir la session Supabase à chaque navigation, et rediriger
  * les visiteurs non connectés vers la page de connexion.
  */
-
-/** Chemins accessibles sans compte. */
-const PUBLIC_PATHS = ["/", "/login", "/reset-password", "/auth"];
-
-function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`)));
-}
 
 export default async function proxy(request: NextRequest) {
   // Sans configuration Supabase, l'application reste consultable et affiche
@@ -43,7 +37,7 @@ export default async function proxy(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
-  if (!user && !isPublic(pathname)) {
+  if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

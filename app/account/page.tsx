@@ -194,6 +194,18 @@ export default function AccountPage() {
           </Button>
         )}
       </Card>
+
+      <nav aria-label="Informations légales" className="flex flex-wrap justify-center gap-x-4 gap-y-2 pt-2 text-xs text-fg-subtle">
+        <Link href="/legal/mentions" className="hover:text-fg">
+          Mentions légales
+        </Link>
+        <Link href="/legal/confidentialite" className="hover:text-fg">
+          Confidentialité
+        </Link>
+        <Link href="/legal/conditions" className="hover:text-fg">
+          Conditions d&apos;utilisation
+        </Link>
+      </nav>
     </div>
   );
 }

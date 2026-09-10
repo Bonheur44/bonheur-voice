@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/layout/Logo";
 import { Card, Eyebrow, LinkButton } from "@/components/ui";
 import { SKILLS, SKILL_ORDER } from "@/lib/skills";
 import { EXERCISES } from "@/data/exercises";
@@ -20,9 +21,7 @@ export default function LandingPage() {
     <div className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6">
       <header className="flex items-center justify-between py-5">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-accent to-orange-600 text-base font-black text-black shadow-glow" aria-hidden>
-            ♪
-          </div>
+          <Logo />
           <div>
             <div className="text-sm font-semibold leading-tight">Vocal Training</div>
             <div className="text-[11px] uppercase tracking-[0.16em] text-fg-subtle">Coach choral</div>
@@ -128,7 +127,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="pt-10 text-center text-[11px] text-fg-subtle">Vocal Training · outil d&apos;entraînement vocal personnel</footer>
+      <footer className="mt-10 border-t border-border pt-6 text-center text-[11px] text-fg-subtle">
+        <nav aria-label="Informations légales" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          <Link href="/legal/mentions" className="hover:text-fg">
+            Mentions légales
+          </Link>
+          <Link href="/legal/confidentialite" className="hover:text-fg">
+            Confidentialité
+          </Link>
+          <Link href="/legal/conditions" className="hover:text-fg">
+            Conditions d&apos;utilisation
+          </Link>
+        </nav>
+        <p className="mt-4">Vocal Training · outil d&apos;entraînement vocal personnel, sans publicité ni mesure d&apos;audience.</p>
+      </footer>
     </div>
   );
 }

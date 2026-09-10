@@ -215,6 +215,18 @@ export function LoginForm() {
         Ton adresse sert uniquement à identifier ton compte. Aucun enregistrement audio n&apos;est transmis : l&apos;analyse du micro reste dans ton
         navigateur.
       </p>
+
+      <p className="text-center text-[11px] text-fg-subtle">
+        {mode === "signup" ? "En créant un compte, tu acceptes les " : "Voir les "}
+        <Link href="/legal/conditions" className="underline underline-offset-2 hover:text-fg">
+          conditions d&apos;utilisation
+        </Link>{" "}
+        et la{" "}
+        <Link href="/legal/confidentialite" className="underline underline-offset-2 hover:text-fg">
+          politique de confidentialité
+        </Link>
+        .
+      </p>
     </div>
   );
 }

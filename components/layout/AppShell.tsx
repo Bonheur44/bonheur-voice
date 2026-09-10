@@ -10,6 +10,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { SetupRequired } from "@/components/auth/SetupRequired";
 import { SyncBadge } from "@/components/auth/SyncBadge";
 import { Spinner } from "@/components/ui";
+import { isPublicPath } from "@/lib/routes";
 import { Logo } from "./Logo";
 
 export { Logo };
@@ -23,11 +24,9 @@ const NAV = [
 ];
 
 /** Pages consultables sans compte. */
-const PUBLIC_PATHS = ["/", "/login", "/reset-password", "/auth"];
 
-function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`)));
-}
+
+
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();

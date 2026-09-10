@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Vocal Training</title>
+  <defs>
+    <linearGradient id="vt-logo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#vt-logo)"/>
+  <g fill="#0b0d12">
+    <rect x="5.25" y="11" width="3.5" height="10" rx="1.75"/>
+    <rect x="11.25" y="7" width="3.5" height="18" rx="1.75"/>
+    <rect x="17.25" y="4.5" width="3.5" height="23" rx="1.75"/>
+    <rect x="23.25" y="9" width="3.5" height="14" rx="1.75"/>
+  </g>
+</svg>
