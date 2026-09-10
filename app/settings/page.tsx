@@ -8,7 +8,7 @@ import { DURATION_OPTIONS } from "@/components/routine/SessionPlan";
 import { InstrumentPicker, VoiceSetPicker } from "@/components/audio/SoundPicker";
 import { getAudioEngine } from "@/lib/audio/engine";
 import { midiToName } from "@/lib/audio/notes";
-import { computeLevel } from "@/lib/progression";
+import { computeLevel, measureSkills } from "@/lib/progression";
 import { LEVELS } from "@/lib/skills";
 import { exportData, useAppStore } from "@/lib/store";
 import { syncService } from "@/lib/sync/service";
@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const profile = useAppStore((s) => s.profile);
   const skills = useAppStore((s) => s.skills);
   const sessions = useAppStore((s) => s.sessions);
+  const observations = useAppStore((s) => s.observations);
   const updateProfile = useAppStore((s) => s.updateProfile);
   const importData = useAppStore((s) => s.importData);
   const resetAll = useAppStore((s) => s.resetAll);
@@ -38,7 +39,7 @@ export default function SettingsPage() {
     );
   }
 
-  const autoLevel = computeLevel(skills, sessions);
+  const autoLevel = computeLevel(skills, sessions, measureSkills(observations));
 
   const doExport = () => {
     const data = exportData(useAppStore.getState());

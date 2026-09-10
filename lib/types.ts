@@ -90,8 +90,13 @@ export interface Session {
   updatedAt?: string;
 }
 
+/**
+ * Ce que l'on retient d'une compétence, hors mesure.
+ *
+ * Il n'y a pas de score : ce qui se mesure (justesse, stabilité) est recalculé
+ * depuis les observations, ce qui se pratique est compté depuis les séances.
+ */
 export interface SkillState {
-  score: number;
   /** Dix derniers ressentis, le plus récent en dernier. */
   feedbackHistory: Feedback[];
   /** Nombre d'exercices réalisés dans cette compétence. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EXERCISES, getExercise } from "@/data/exercises";
-import { generateSession, skillWeight, targetDifficulty } from "@/lib/routine/generator";
-import { initialSkills } from "@/lib/progression";
+import { generateSession, skillWeight, standingOf, targetDifficulty } from "@/lib/routine/generator";
+import { EMPTY_MEASURED, initialSkills, practiceOf } from "@/lib/progression";
 import type { Feedback, Level, SkillState } from "@/lib/types";
 
 const base = () => ({ skills: initialSkills(), history: [], date: "2026-09-08" });
@@ -59,22 +59,37 @@ describe("generateSession", () => {
 });
 
 describe("adaptation", () => {
-  const skill = (score: number, fb: Feedback[]): SkillState => ({ score, feedbackHistory: fb, exercisesDone: fb.length });
+  const skill = (fb: Feedback[]): SkillState => ({ feedbackHistory: fb, exercisesDone: fb.length });
 
   it("baisse la difficulté cible après des retours très difficiles", () => {
-    expect(targetDifficulty(skill(40, [1, 2, 1, 2]), 2)).toBeLessThan(targetDifficulty(skill(40, [3, 3, 3, 3]), 2));
+    expect(targetDifficulty(skill([1, 2, 1, 2]), 2, 40)).toBeLessThan(targetDifficulty(skill([3, 3, 3, 3]), 2, 40));
   });
 
   it("monte la difficulté cible après des retours très faciles", () => {
-    expect(targetDifficulty(skill(40, [5, 5, 4, 5]), 2)).toBeGreaterThan(targetDifficulty(skill(40, [3, 3, 3, 3]), 2));
+    expect(targetDifficulty(skill([5, 5, 4, 5]), 2, 40)).toBeGreaterThan(targetDifficulty(skill([3, 3, 3, 3]), 2, 40));
   });
 
   it("borne la difficulté au niveau", () => {
-    expect(targetDifficulty(skill(95, [5, 5, 5, 5, 5]), 1)).toBeLessThanOrEqual(2);
+    expect(targetDifficulty(skill([5, 5, 5, 5, 5]), 1, 95)).toBeLessThanOrEqual(2);
   });
 
   it("donne plus de poids à une compétence faible", () => {
-    expect(skillWeight("pitch", skill(20, []), 1)).toBeGreaterThan(skillWeight("pitch", skill(80, []), 1));
+    expect(skillWeight("pitch", skill([]), 1, 20)).toBeGreaterThan(skillWeight("pitch", skill([]), 1, 80));
+  });
+
+  it("place une compétence d'après la mesure quand elle existe, d'après la pratique sinon", () => {
+    const practice = practiceOf(initialSkills(), []);
+    const measured = { ...EMPTY_MEASURED, pitch: { ...EMPTY_MEASURED.pitch, value: 72 } };
+    expect(standingOf("pitch", measured, practice)).toBe(72);
+    expect(standingOf("pitch", EMPTY_MEASURED, practice)).toBe(0);
+    expect(standingOf("articulation", measured, practice)).toBe(0);
+  });
+
+  it("une justesse mesurée basse reçoit plus de temps qu'une justesse jamais mesurée mais beaucoup pratiquée", () => {
+    const low = generateSession({ ...base(), duration: 30 * 60, level: 1, measured: { ...EMPTY_MEASURED, pitch: { ...EMPTY_MEASURED.pitch, value: 15 } } });
+    const minutesOn = (s: ReturnType<typeof generateSession>) =>
+      s.exercises.filter((e) => getExercise(e.exerciseId)!.category === "pitch").reduce((a, e) => a + e.plannedDuration, 0);
+    expect(minutesOn(low)).toBeGreaterThan(0);
   });
 });
 

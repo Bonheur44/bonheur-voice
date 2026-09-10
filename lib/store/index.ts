@@ -5,14 +5,14 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { Achievement, AppData, Feedback, Level, Session, SkillId, SkillState, UserProfile } from "@/lib/types";
 import { getExercise } from "@/data/exercises";
 import { generateSession } from "@/lib/routine/generator";
-import { ACHIEVEMENTS, computeLevel, computeStreak, initialSkills, scoreGain } from "@/lib/progression";
+import { ACHIEVEMENTS, computeLevel, computeStreak, initialSkills, measureSkills, practiceOf } from "@/lib/progression";
 import { DEFAULT_RANGE } from "@/lib/audio/notes";
 import { trimObservations } from "@/lib/vocal/observations";
 import { defaultLineFor } from "@/lib/vocal/voiceParts";
 import type { VocalObservation } from "@/lib/vocal/types";
 import { STORAGE_KEY, localStorageAdapter } from "@/lib/storage";
 import { storageKeyFor } from "@/lib/supabase/config";
-import { clamp, hashString, toDayKey } from "@/lib/utils";
+import { hashString, toDayKey } from "@/lib/utils";
 
 const now = () => new Date().toISOString();
 
@@ -66,8 +66,17 @@ export interface AppState extends AppData {
   resetAll: () => void;
 }
 
-function effectiveLevelOf(profile: UserProfile, skills: Record<SkillId, SkillState>, sessions: Session[]): Level {
-  return profile.manualLevel ?? computeLevel(skills, sessions);
+/**
+ * Niveau effectif.
+ *
+ * Le niveau est une position dans le parcours, pas une mesure : il ne redescend
+ * pas de lui-même quand une compétence mesurée recule. Ce sont les compétences
+ * qui montent et descendent ; le niveau, lui, n'avance que sur des données
+ * suffisantes et se règle à la main dans les réglages.
+ */
+function effectiveLevelOf(profile: UserProfile, skills: Record<SkillId, SkillState>, sessions: Session[], observations: VocalObservation[]): Level {
+  if (profile.manualLevel) return profile.manualLevel;
+  return Math.max(profile.level, computeLevel(skills, sessions, measureSkills(observations))) as Level;
 }
 
 export const useAppStore = create<AppState>()(
@@ -84,14 +93,14 @@ export const useAppStore = create<AppState>()(
 
       effectiveLevel: () => {
         const s = get();
-        return effectiveLevelOf(s.profile, s.skills, s.sessions);
+        return effectiveLevelOf(s.profile, s.skills, s.sessions, s.observations);
       },
 
       ensureTodaySession: (duration) => {
         const s = get();
         const today = toDayKey();
         const wanted = duration ?? s.profile.preferredDuration;
-        const level = effectiveLevelOf(s.profile, s.skills, s.sessions);
+        const level = effectiveLevelOf(s.profile, s.skills, s.sessions, s.observations);
         // Une séance en cours (démarrée) d'aujourd'hui est conservée même si la durée ou le niveau change.
         if (s.currentSession && s.currentSession.date === today && s.currentSession.startedAt) {
           return s.currentSession;
@@ -99,7 +108,7 @@ export const useAppStore = create<AppState>()(
         if (s.currentSession && s.currentSession.date === today && s.currentSession.plannedDuration === wanted && s.currentSession.level === level) {
           return s.currentSession;
         }
-        const session = { ...generateSession({ duration: wanted, level, skills: s.skills, history: s.sessions, date: today }), updatedAt: now() };
+        const session = { ...generateSession({ duration: wanted, level, skills: s.skills, history: s.sessions, measured: measureSkills(s.observations), date: today }), updatedAt: now() };
         set({ currentSession: session });
         return session;
       },
@@ -112,9 +121,10 @@ export const useAppStore = create<AppState>()(
         const session = {
           ...generateSession({
             duration: wanted,
-            level: effectiveLevelOf(s.profile, s.skills, s.sessions),
+            level: effectiveLevelOf(s.profile, s.skills, s.sessions, s.observations),
             skills: s.skills,
             history: s.sessions,
+            measured: measureSkills(s.observations),
             date: today,
             seed: hashString(`${prevSeed}-${Date.now()}`),
           }),
@@ -142,11 +152,11 @@ export const useAppStore = create<AppState>()(
           const skills = { ...s.skills };
           const target = exercises[index];
           const exercise = getExercise(target.exerciseId);
+          // Le ressenti est conservé pour adapter la difficulté ; il ne fait plus
+          // monter aucun score. Ce que la voix vaut, le micro le mesure ailleurs.
           if (exercise && data.feedback && !data.skipped) {
             const prev = skills[exercise.category];
-            const gain = scoreGain(exercise, data.feedback, prev.score, data.actualDuration);
             skills[exercise.category] = {
-              score: clamp(prev.score + gain, 0, 100),
               feedbackHistory: [...prev.feedbackHistory, data.feedback].slice(-10),
               exercisesDone: prev.exercisesDone + 1,
               updatedAt: now(),
@@ -161,10 +171,10 @@ export const useAppStore = create<AppState>()(
         const total = s.currentSession.exercises.reduce((a, e) => a + (e.actualDuration ?? 0), 0);
         const finished: Session = { ...s.currentSession, completedAt: now(), totalDuration: total, updatedAt: now() };
         const sessions = [...s.sessions.filter((x) => x.id !== finished.id), finished];
-        const level = effectiveLevelOf(s.profile, s.skills, sessions);
+        const level = effectiveLevelOf(s.profile, s.skills, sessions, s.observations);
         const streak = computeStreak(sessions);
         const already = new Set(s.achievements.map((a) => a.id));
-        const newAch: Achievement[] = ACHIEVEMENTS.filter((a) => !already.has(a.id) && a.check({ sessions, skills: s.skills, streak, level })).map((a) => ({
+        const newAch: Achievement[] = ACHIEVEMENTS.filter((a) => !already.has(a.id) && a.check({ sessions, skills: s.skills, streak, level, measured: measureSkills(s.observations), practice: practiceOf(s.skills, sessions) })).map((a) => ({
           id: a.id,
           unlockedAt: now(),
         }));

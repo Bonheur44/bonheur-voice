@@ -76,11 +76,12 @@ Sans ces variables, la suite de bout en bout est ignorée au lieu d'échouer. El
 - **Onboarding** en quatre écrans : chorale ou non, pupitre déclaré parmi les sept, durée préférée, puis proposition d'évaluer sa voix tout de suite ou plus tard.
 - **Évaluation de la voix** : test d'étendue interactif au micro. Il explore le grave puis l'aigu deux demi-tons à la fois, s'arrête immédiatement sur une gêne déclarée, revérifie quelques notes, et produit une étendue explorée, une zone fiable, une zone confortable, une zone centrale, d'éventuelles zones de transition et une estimation de pupitre assortie d'un niveau de confiance.
 - **Dashboard** : séance du jour, profil vocal, série de jours, temps total, niveau, compétences, recommandation, derniers exercices.
-- **Séance** : générée selon la durée choisie parmi 10, 15, 20, 30 et 45 minutes, le niveau, les scores par compétence et les ressentis récents. Structure fixe : respiration, échauffement, blocs de travail, retour au calme.
+- **Compétences en deux natures** : justesse et stabilité sont **mesurées** au micro, affichées de 0 à 100 avec leur écart en cents, leur tendance sur trois semaines et leur fiabilité — elles montent et descendent, et disent « données insuffisantes » sous six mesures. Les sept autres n'ont aucune mesure possible dans un navigateur : l'application affiche ce qui a été **pratiqué** (exercices, temps, dernière séance) et le ressenti déclaré, sans note de maîtrise.
+- **Séance** : générée selon la durée choisie parmi 10, 15, 20, 30 et 45 minutes, le niveau, la position de chaque compétence (mesurée si possible, pratiquée sinon) et les ressentis récents. Structure fixe : respiration, échauffement, blocs de travail, retour au calme.
 - **Lecteur d'exercice** : objectif, pourquoi, consignes, points d'attention, erreurs fréquentes, sécurité, puis minuteur, répétitions, pause, navigation, outil interactif, et enfin le ressenti.
 - **Outils Web Audio** : guide respiratoire, métronome, bourdon, piano, « trouve la note » au micro, mesure de stabilité, intervalles, comparaison de hauteurs, gammes bornées à la zone de travail, apprentissage de mélodie, et le **mode chorale** SATB avec mixage par pupitre.
 - **Mode chorale universel** : la ligne travaillée (S, A, T ou B) est un réglage. Les exercices choraux sont écrits en rôles — « ma ligne », « la voix qui attire l'oreille », « la voix d'appui » — et se reformulent pour le pupitre de l'utilisateur. La ligne à apprendre est extraite du choral et transposée dans sa zone.
-- **Progression et historique** : radar et barres par compétence, minutes par semaine, activité sur 28 jours, objectifs, détail de chaque séance.
+- **Progression et historique** : compétences mesurées et pratiquées, courbe d'évolution mesurée semaine par semaine (une semaine sans assez de mesures reste vide), minutes par semaine, activité sur 28 jours, objectifs, détail de chaque séance.
 - **Choix des timbres** : six sons pour l'instrument de référence, du piano au son pur, et six jeux de voix pour le chœur. Le réglage reste sur l'appareil, parce que le bon timbre dépend du casque ou du haut-parleur utilisé. Ces choix ne sont pas seulement esthétiques : le son pur rend les écarts de justesse plus audibles, l'orgue aide à tenir une note longue, et les voix identiques suppriment tout indice de timbre pour retrouver sa ligne, ce qui en fait le réglage le plus exigeant.
 - **Compte** : nom affiché, changement de mot de passe, état de synchronisation, suppression définitive du compte.
 
@@ -141,12 +142,12 @@ Le cache local reste la source de vérité pendant l'usage : l'application fonct
 - La détection de hauteur par autocorrélation est un **repère approximatif** : voix seule et tenue, pièce calme, erreurs d'octave possibles, inutilisable sur les consonnes. Elle couvre 60 à 1200 Hz, soit du Si1 d'une basse au Ré6 d'une soprano. L'interface n'affiche que « trop bas, correct, trop haut » à 25 cents près, et une stabilité indicative. Aucun son n'est enregistré ni transmis.
 - Le profil vocal estimé n'est **ni un diagnostic, ni un verdict sur un pupitre**. Le placement dans un chœur dépend aussi du timbre, de l'endurance et des besoins de l'ensemble, que l'application ne mesure pas.
 - Les voix du mode chorale sont synthétiques.
-- Les scores de compétence modélisent la pratique et le ressenti déclaré. Ce n'est pas une mesure de la voix.
+- Seules **deux** compétences se mesurent : la justesse et la stabilité, et seulement au micro, avec les limites ci-dessus. Une baisse peut venir de la pièce ou de la fatigue autant que de la voix. Les sept autres ne sont pas notées, parce que rien ici ne sait les évaluer : ce qui s'affiche est un décompte de pratique et un ressenti déclaré, jamais un niveau de maîtrise.
 - L'application n'est pas un diagnostic médical : arrêter en cas de douleur, de raclement ou de fatigue vocale.
 
 ## Architecture
 
-Voir [`docs/01-ANALYSE.md`](docs/01-ANALYSE.md) pour le passage du profil aux compétences et à la progression, [`docs/02-ARCHITECTURE.md`](docs/02-ARCHITECTURE.md) pour la technique, et [`docs/05-EVOLUTION-COACH-CHORAL.md`](docs/05-EVOLUTION-COACH-CHORAL.md) pour le passage de l'application ténor au coach multi-pupitres.
+Voir [`docs/01-ANALYSE.md`](docs/01-ANALYSE.md) pour le passage du profil aux compétences et à la progression, [`docs/02-ARCHITECTURE.md`](docs/02-ARCHITECTURE.md) pour la technique, [`docs/05-EVOLUTION-COACH-CHORAL.md`](docs/05-EVOLUTION-COACH-CHORAL.md) pour le passage de l'application ténor au coach multi-pupitres, et [`docs/06-COMPETENCES-MESUREES.md`](docs/06-COMPETENCES-MESUREES.md) pour l'abandon des scores déclaratifs au profit de compétences réellement mesurées.
 
 ```text
 app/            page d'accueil publique, login, reset-password, auth/callback,
@@ -161,7 +162,7 @@ lib/            types, skills, utils,
                 assessment  machine à états du test d'étendue, catalogue des tests
                 exercises   personnalisation des textes selon la ligne travaillée
                 routine     génération de séance
-                progression scores, niveaux, séries, recommandations
+                progression mesure (justesse, stabilité), pratique, niveaux, séries, recommandations
                 storage, store, supabase (clients et types), sync (fusion et service)
 data/           exercises (54 exercices, 9 catégories),
                 music (mélodies, choral SATB, extraction de « ma ligne »)

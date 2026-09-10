@@ -130,7 +130,7 @@ test.describe("Vocal Training — coach vocal choral", () => {
     await page.goto("/progression");
     await expect(page.getByRole("heading", { name: "Progression" })).toBeVisible();
     await expect(page.getByText("Minutes par semaine")).toBeVisible();
-    await expect(page.getByRole("img", { name: "Radar des compétences" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "Évolution mesurée" })).toBeVisible();
 
     // Historique
     await page.goto("/history");

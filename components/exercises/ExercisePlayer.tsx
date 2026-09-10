@@ -11,10 +11,10 @@ import { SessionPlan } from "@/components/routine/SessionPlan";
 import { getExercise } from "@/data/exercises";
 import { usePersonalizedExercise } from "./usePersonalized";
 import { getAudioEngine } from "@/lib/audio/engine";
-import { ACHIEVEMENTS } from "@/lib/progression";
+import { ACHIEVEMENTS, MEASURED_SKILL_IDS, measureSkills, type MeasuredSkills } from "@/lib/progression";
 import { FEEDBACK_LABELS, SKILLS } from "@/lib/skills";
 import { useAppStore } from "@/lib/store";
-import type { Feedback, Session, SkillId } from "@/lib/types";
+import type { Feedback, Session } from "@/lib/types";
 import { cn, formatClock, formatDuration } from "@/lib/utils";
 
 type Phase = "intro" | "running" | "feedback" | "done";
@@ -24,7 +24,7 @@ export function ExercisePlayer({ session }: { session: Session }) {
   const startSession = useAppStore((s) => s.startSession);
   const recordExercise = useAppStore((s) => s.recordExercise);
   const finishSession = useAppStore((s) => s.finishSession);
-  const skillsNow = useAppStore((s) => s.skills);
+  const observationsNow = useAppStore((s) => s.observations);
   const achievementsNow = useAppStore((s) => s.achievements);
 
   const firstPending = Math.max(0, session.exercises.findIndex((e) => !e.completed && !e.skipped));
@@ -36,7 +36,7 @@ export function ExercisePlayer({ session }: { session: Session }) {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [finished, setFinished] = useState<Session | null>(null);
   const [showPlan, setShowPlan] = useState(false);
-  const [skillsAtStart] = useState(() => skillsNow);
+  const [observationsAtStart] = useState(() => observationsNow);
   const [achievementsAtStart] = useState(() => achievementsNow.length);
   const elapsedRef = useRef(0);
   const wakeLock = useRef<{ release: () => Promise<void> } | null>(null);
@@ -141,7 +141,13 @@ export function ExercisePlayer({ session }: { session: Session }) {
   const progress = useMemo(() => ((index + (phase === "feedback" ? 1 : phase === "running" ? Math.min(1, elapsed / Math.max(1, planned)) : 0)) / total) * 100, [index, phase, elapsed, planned, total]);
 
   if (phase === "done") {
-    return <SessionSummary session={finished ?? session} skillsBefore={skillsAtStart} skillsAfter={skillsNow} newAchievements={achievementsNow.slice(achievementsAtStart)} />;
+    return <SessionSummary
+      session={finished ?? session}
+      before={measureSkills(observationsAtStart)}
+      after={measureSkills(observationsNow)}
+      newMeasures={observationsNow.length - observationsAtStart.length}
+      newAchievements={achievementsNow.slice(achievementsAtStart)}
+    />;
   }
 
   if (!exercise || !se) {
@@ -352,12 +358,23 @@ function TimerRing({ value, paused }: { value: number; paused: boolean }) {
   );
 }
 
-function SessionSummary({ session, skillsBefore, skillsAfter, newAchievements }: { session: Session; skillsBefore: Record<SkillId, { score: number }>; skillsAfter: Record<SkillId, { score: number }>; newAchievements: Array<{ id: string }> }) {
+function SessionSummary({
+  session,
+  before,
+  after,
+  newMeasures,
+  newAchievements,
+}: {
+  session: Session;
+  before: MeasuredSkills;
+  after: MeasuredSkills;
+  newMeasures: number;
+  newAchievements: Array<{ id: string }>;
+}) {
   const done = session.exercises.filter((e) => e.completed);
-  const gains = (Object.keys(skillsAfter) as SkillId[])
-    .map((id) => ({ id, delta: skillsAfter[id].score - skillsBefore[id].score }))
-    .filter((g) => g.delta > 0.05)
-    .sort((a, b) => b.delta - a.delta);
+  // Seules les compétences mesurées bougent, et dans les deux sens : un recul
+  // s'affiche comme un progrès. Sans mesure pendant la séance, rien à montrer.
+  const measuredNow = MEASURED_SKILL_IDS.map((id) => ({ id, before: before[id].value, after: after[id].value })).filter((c) => c.after !== null);
   const avgFb = done.filter((e) => e.feedback).reduce((a, e) => a + (e.feedback ?? 0), 0) / Math.max(1, done.filter((e) => e.feedback).length);
 
   return (
@@ -370,19 +387,38 @@ function SessionSummary({ session, skillsBefore, skillsAfter, newAchievements }:
         </p>
       </div>
 
-      {gains.length > 0 && (
+      {newMeasures > 0 && (
         <Card>
-          <Eyebrow className="mb-3">Progression</Eyebrow>
-          <div className="space-y-2">
-            {gains.map((g) => (
-              <div key={g.id} className="flex items-center justify-between text-sm">
-                <span>
-                  {SKILLS[g.id].emoji} {SKILLS[g.id].label}
-                </span>
-                <span className="font-mono text-success">+{g.delta.toFixed(1)}</span>
-              </div>
-            ))}
-          </div>
+          <Eyebrow className="mb-1">Mesuré pendant la séance</Eyebrow>
+          <p className="mb-3 text-xs text-fg-subtle">
+            {newMeasures} mesure{newMeasures > 1 ? "s" : ""} au micro. Ce qui suit est mesuré, pas déclaré.
+          </p>
+          {measuredNow.length === 0 ? (
+            <p className="text-sm text-fg-muted">Pas encore assez de mesures pour chiffrer une compétence.</p>
+          ) : (
+            <div className="space-y-2">
+              {measuredNow.map((c) => {
+                const delta = c.before === null ? null : (c.after as number) - c.before;
+                return (
+                  <div key={c.id} className="flex items-center justify-between text-sm">
+                    <span>
+                      {SKILLS[c.id].emoji} {SKILLS[c.id].label} mesurée
+                    </span>
+                    <span className="font-mono tabular-nums">
+                      {c.before !== null && <span className="text-fg-subtle">{c.before} → </span>}
+                      {c.after}
+                      {delta !== null && delta !== 0 && (
+                        <span className={cn("ml-2", delta > 0 ? "text-success" : "text-warning")}>
+                          {delta > 0 ? "+" : ""}
+                          {delta}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       )}
 

@@ -39,7 +39,7 @@ lib/
   exercises/personalize.ts   # résolution des rôles {{me}}, {{attractor}}, {{support}}
   exercises/                 # accès au catalogue
   routine/generator.ts       # génération de séance
-  progression/               # scores, niveaux, séries, recommandations
+  progression/               # mesure, pratique, niveaux, séries, recommandations
   audio/                     # engine, notes, pitch-detector, voices
   storage/                   # adaptateur local + interface pour un backend
   store/                     # Zustand store
@@ -71,7 +71,7 @@ interface Exercise {
 
 interface SessionExercise { exerciseId; plannedDuration; actualDuration?; feedback?: 1..5; completed; skipped }
 interface Session { id; date; plannedDuration; level; exercises: SessionExercise[]; startedAt?; completedAt?; totalDuration }
-interface SkillState { score: 0..100; feedbackHistory: (1..5)[] }   // 10 derniers retours
+interface SkillState { feedbackHistory: (1..5)[]; exercisesDone }  // 10 derniers retours ; pas de score
 interface UserProfile {
   declaredPart: VoicePart | 'unknown';   // déclaré, jamais déduit
   choirLine: 'S'|'A'|'T'|'B';            // ligne travaillée, réglable à part
@@ -88,26 +88,41 @@ Entrées : durée disponible, niveau, scores, historique des retours, date (grai
 
 1. **Structure fixe** : Respiration → Échauffement → blocs de travail → Retour au calme.
 2. **Budget temps** : respiration ~15 %, échauffement ~18 %, retour au calme ~8 %, le reste réparti entre les compétences éligibles au niveau courant.
-3. **Poids d'une compétence** = poids de base du niveau × (1 + (100 − score)/100) : une compétence faible reçoit plus de temps. Une compétence marquée « très facile » de façon répétée reçoit un peu moins de temps ; une compétence « très difficile » garde son temps mais reçoit des exercices plus faciles.
+3. **Poids d'une compétence** = poids de base du niveau × (1 + (100 − position)/100). La *position* vient de la mesure pour la justesse et la stabilité, du nombre d'exercices faits pour les autres (`standingOf`) : une compétence faible reçoit plus de temps. Une compétence marquée « très facile » de façon répétée reçoit un peu moins de temps ; une compétence « très difficile » garde son temps mais reçoit des exercices plus faciles.
 4. **Difficulté cible par compétence** : moyenne des 5 derniers retours. Moyenne ≤ 2 → cible −1 ; ≥ 4,2 → +1, bornée par le niveau.
 5. **Choix des exercices** : parmi les exercices de la compétence dont `level ≤ niveau` et difficulté proche de la cible, on préfère ceux non réalisés récemment ; tirage pseudo-aléatoire avec graine = date, donc la séance du jour est stable tant qu'on ne la régénère pas.
 6. **Ajustement des durées** : chaque exercice est étiré/compressé dans ses bornes pour remplir le budget ; en dessous de 15 min, on limite le nombre de blocs.
 
 ## 5. Progression
 
-- **Gain de score** par exercice terminé : `base × facteurDifficulté × facteurRessenti` avec ressenti 1→0.6, 2→0.85, 3→1, 4→1.05, 5→0.9 (un exercice trop facile apprend peu). Rendement décroissant au-dessus de 70.
-- **Niveau** : déblocage automatique selon les seuils du document d'analyse ; l'utilisateur peut forcer un niveau.
+- **Compétences mesurées** (`lib/progression/measured.ts`) : justesse et stabilité, recalculées depuis les
+  observations comme le profil vocal, jamais stockées. Justesse = écart absolu moyen à la note demandée, ramené
+  sur 0–100 entre 5 cents (inaudible, 100) et 60 cents (autre note, 0) ; stabilité = dérive moyenne pendant la
+  tenue, sur la même courbe que `stabilityFromSpread`. Moyennes pondérées par la fraîcheur, tolérance d'octave,
+  `null` sous six mesures exploitables. La tendance compare à la valeur d'il y a trois semaines, calculée sur les
+  seules observations qui existaient alors ; en dessous de 4 points d'écart, c'est du bruit de mesure.
+- **Pratique** (`lib/progression/practice.ts`) : exercices terminés, temps passé et date de dernière séance par
+  compétence, dérivés des séances terminées. Un décompte, qui ne fait que monter, et qui est présenté comme tel.
+- **Il n'y a plus de score par compétence.** Le ressenti déclaré ne fait plus rien monter : il sert seulement à
+  régler la difficulté cible et à alimenter les recommandations.
+- **Niveau** : déblocage automatique selon les seuils du document d'analyse — mesures *et* pratique. Il ne
+  redescend pas de lui-même (`Math.max(profile.level, computeLevel(…))`) ; l'utilisateur peut forcer un niveau.
 - **Série** : jours consécutifs avec au moins une séance terminée (la série survit si la dernière séance date d'hier).
-- **Recommandations** : règles simples (compétence la plus faible, retour « très difficile » répété, retour « très facile » répété, niveau proche du déblocage, inactivité).
+- **Recommandations** : règles simples (recul ou progrès mesuré, absence de mesure, compétence mesurée la plus faible, retour « très difficile » répété, retour « très facile » répété, niveau proche du déblocage, inactivité). Un recul mesuré est annoncé aussi franchement qu'un progrès.
 
 ## 5 bis. Profil vocal
 
 ```text
 micro → PitchFrame → VocalObservation → NoteEvidence → VocalAnalysis → zone de travail → exercices
+                                    └────────────→ MeasuredSkills → compétences mesurées, niveau, dosage
 ```
 
 Seules les observations sont persistées ; tout le reste est recalculé par des fonctions pures. Le pupitre déclaré
 (`profile.declaredPart`) sert à amorcer le test et à choisir la ligne travaillée, et n'entre dans aucun calcul.
+
+- **Sources d'observation** : le test d'étendue, « Trouve la note » et « Note droite » produisent tous trois des
+  observations, par le même chemin (`lib/vocal/capture.ts`), pour qu'elles soient comparables. Une tentative ne
+  compte que si elle tient une demi-seconde au-dessus du seuil de clarté.
 
 - **Pondération** : demi-vie de 60 jours, plancher à 0,12, oubli au-delà d'un an, 400 observations conservées.
 - **Indexation** : l'étendue et le confort sont indexés sur la note *produite*, la justesse sur la note *cible*, avec

@@ -4,7 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { LevelMeter, MicLimits, MicNotice, WidgetFrame, foldCents, usePitch, useRange } from "./common";
 import { getAudioEngine } from "@/lib/audio/engine";
-import { centsOff, midiToName } from "@/lib/audio/notes";
+import { centsOff, freqToMidi, midiToName } from "@/lib/audio/notes";
+import { useAppStore } from "@/lib/store";
+import { MIN_FRAME_CLARITY, MIN_FRAME_LEVEL, observationFrom, summarizeFrames } from "@/lib/vocal/capture";
+
+/** Une trame retenue toutes les 40 ms : inutile d'en garder davantage pour juger d'une dérive. */
+const PUSH_INTERVAL_MS = 40;
+/**
+ * Trames voisées nécessaires pour que la tenue compte comme une mesure.
+ * Une demi-seconde de son : en dessous, ce n'est pas une note tenue, et
+ * l'observation serait de toute façon écartée par l'analyse.
+ */
+const MIN_SUSTAIN_FRAMES = Math.ceil(500 / PUSH_INTERVAL_MS);
 
 /** Tenue de note : visualise la dérive de hauteur en cents pendant N secondes. */
 export function SustainMeter({ seconds }: { seconds: number }) {
@@ -20,6 +31,9 @@ export function SustainMeter({ seconds }: { seconds: number }) {
   const recordingRef = useRef(false);
   const targetRef = useRef(target);
   const lastPush = useRef(0);
+  const midiRef = useRef<number[]>([]);
+  const clarityRef = useRef<number[]>([]);
+  const addObservations = useAppStore((s) => s.addObservations);
 
   useEffect(() => {
     targetRef.current = target;
@@ -27,10 +41,14 @@ export function SustainMeter({ seconds }: { seconds: number }) {
 
   const { frame, status } = usePitch(micOn, (f) => {
     if (!recordingRef.current) return;
-    if (f.time - lastPush.current < 40) return;
+    if (f.time - lastPush.current < PUSH_INTERVAL_MS) return;
     lastPush.current = f.time;
     let v: number | null = null;
-    if (f.frequency && f.clarity > 0.85 && f.level > 0.03) v = foldCents(centsOff(f.frequency, targetRef.current));
+    if (f.frequency && f.clarity >= MIN_FRAME_CLARITY && f.level >= MIN_FRAME_LEVEL) {
+      v = foldCents(centsOff(f.frequency, targetRef.current));
+      midiRef.current.push(freqToMidi(f.frequency));
+      clarityRef.current.push(f.clarity);
+    }
     traceRef.current.push(v);
     setTrace(traceRef.current.filter((x): x is number => x !== null).slice(-150));
   });
@@ -47,17 +65,24 @@ export function SustainMeter({ seconds }: { seconds: number }) {
         if (valid.length > 5) {
           const mean = valid.reduce((a, b) => a + b, 0) / valid.length;
           const sd = Math.sqrt(valid.reduce((a, b) => a + (b - mean) ** 2, 0) / valid.length);
-          setSummary({ spread: sd, mean, coverage: valid.length / Math.max(1, traceRef.current.length) });
+          const coverage = valid.length / Math.max(1, traceRef.current.length);
+          setSummary({ spread: sd, mean, coverage });
+          // La tenue devient une observation : c'est elle qui fait évoluer la
+          // stabilité mesurée, dans un sens comme dans l'autre.
+          const capture = summarizeFrames(midiRef.current, clarityRef.current, coverage * seconds, MIN_SUSTAIN_FRAMES);
+          if (capture) addObservations([observationFrom(targetRef.current, capture, "sustain")]);
         } else {
           setSummary({ spread: 0, mean: 0, coverage: 0 });
         }
       }
     }, 100);
     return () => window.clearInterval(id);
-  }, [recording, seconds]);
+  }, [recording, seconds, addObservations]);
 
   const start = () => {
     traceRef.current = [];
+    midiRef.current = [];
+    clarityRef.current = [];
     setTrace([]);
     setSummary(null);
     setElapsed(0);

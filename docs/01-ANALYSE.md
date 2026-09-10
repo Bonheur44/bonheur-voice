@@ -37,7 +37,19 @@ Conséquences pour le programme :
 | `choir` | Indépendance chorale | Trouver et tenir sa ligne malgré S/A/B | **P2** | pitch, melody, stability |
 | `warmup` | Échauffement / retour au calme | Sécurité vocale (présent dans chaque séance) | systématique | — |
 
-Chaque compétence a un **score de 0 à 100** dans l'application. Le score initial est estimé à partir du profil (voir §5), puis évolue avec les exercices réalisés et le ressenti déclaré.
+Ces compétences ne sont pas toutes de même nature, et l'application ne les traite plus de la même façon.
+
+- **Justesse** et **stabilité** se *mesurent* : le micro donne un écart à la note demandée et une dérive
+  pendant la tenue. Elles reçoivent une valeur de 0 à 100, recalculée à chaque affichage depuis les
+  observations. Elle **monte et descend**, et vaut « données insuffisantes » tant qu'il y a moins de six
+  mesures exploitables.
+- **Les sept autres** ne se mesurent pas. Elles ne reçoivent donc aucune note : l'application affiche ce qui
+  a été pratiqué (exercices terminés, temps passé, dernière séance) et le ressenti déclaré, étiqueté comme tel.
+
+> Historique : jusqu'à la refonte, chaque compétence portait un « score » de 0 à 100 partant d'une constante,
+> augmenté à chaque exercice terminé en fonction du ressenti déclaré. Il ne pouvait pas baisser, ne consultait
+> jamais le micro, et s'affichait en pourcentage à côté du profil vocal — donnant à un compteur de pratique
+> l'apparence d'une mesure de la voix. Voir `docs/06-COMPETENCES-MESUREES.md`.
 
 ## 3. Objectifs mesurables par compétence
 
@@ -64,15 +76,23 @@ La progression proposée est conservée, avec deux ajustements pédagogiques :
 | Niveau | Nom | Compétences dominantes | Dose légère | Déblocage |
 |---|---|---|---|---|
 | 1 | Fondations | breathing, stability, pitch, articulation | musicality (legato simple) | départ |
-| 2 | Coordination | registers, musicality, melody, pitch | choir (écoute seule), stability | breathing ≥ 45, stability ≥ 40, pitch ≥ 40, ≥ 8 séances |
-| 3 | Indépendance | melody, choir, registers, musicality | breathing, pitch | registers ≥ 40, musicality ≥ 40, melody ≥ 40, ≥ 20 séances |
-| 4 | Choriste autonome | choir (polyphonie, tonalités), melody, musicality | toutes (entretien) | choir ≥ 50, melody ≥ 55, pitch ≥ 60, ≥ 35 séances |
+| 2 | Coordination | registers, musicality, melody, pitch | choir (écoute seule), stability | stabilité **mesurée** ≥ 40, justesse **mesurée** ≥ 40, 6 exercices de respiration, ≥ 8 séances |
+| 3 | Indépendance | melody, choir, registers, musicality | breathing, pitch | justesse mesurée ≥ 50, 6 exercices de registres, de musicalité et de mémoire, ≥ 20 séances |
+| 4 | Choriste autonome | choir (polyphonie, tonalités), melody, musicality | toutes (entretien) | justesse mesurée ≥ 60, stabilité mesurée ≥ 55, 8 exercices choraux, 10 de mémoire, ≥ 35 séances |
 
-Le niveau peut être ajusté manuellement dans les réglages (l'application n'a pas de vue absolue sur la voix réelle).
+Un seuil mesuré exige une mesure : sans micro, on ne franchit pas un palier de justesse, même après cent séances.
+C'est le prix pour que le niveau veuille dire quelque chose. Les critères non mesurables sont exprimés en
+**nombre d'exercices terminés**, ce qui est une quantité de pratique et s'annonce comme telle.
 
-## 5. Scores de départ estimés
+Le niveau ne redescend pas quand une compétence mesurée recule : c'est une position dans le parcours, pas une
+note. Il peut être ajusté manuellement dans les réglages (l'application n'a pas de vue absolue sur la voix réelle).
 
-D'après le profil : respiration 30, stabilité 25, justesse 30, articulation 35, registres 20, musicalité 25, mémoire mélodique 25, indépendance 15. Ces valeurs se corrigent rapidement avec les premiers retours.
+## 5. Point de départ
+
+Aucun. Les compétences mesurées affichent « données insuffisantes » jusqu'aux premières mesures ; les autres
+affichent « pas encore travaillée ». Les scores de départ estimés d'après le profil ont été supprimés : ils
+présentaient une opinion écrite dans le code comme un résultat, et l'écart initial entre deux barres ne reposait
+sur aucune observation.
 
 ## 6. Principes de sécurité vocale intégrés
 

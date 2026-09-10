@@ -1,43 +1,88 @@
 "use client";
 
-import { SKILLS, SKILL_ORDER } from "@/lib/skills";
-import type { SkillId, SkillState } from "@/lib/types";
+import type { MeasuredWeek } from "@/lib/progression";
+import { SKILLS } from "@/lib/skills";
 import { formatDuration } from "@/lib/utils";
 
-/** Radar des compétences (SVG maison). */
-export function SkillRadar({ skills, size = 260 }: { skills: Record<SkillId, SkillState>; size?: number }) {
-  const ids = SKILL_ORDER;
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = size / 2 - 48;
-  const point = (i: number, v: number) => {
-    const a = (Math.PI * 2 * i) / ids.length - Math.PI / 2;
-    return [cx + Math.cos(a) * r * v, cy + Math.sin(a) * r * v] as const;
+/**
+ * Évolution des compétences mesurées, semaine par semaine.
+ *
+ * Deux courbes, avec des trous là où une semaine n'a pas assez de mesures : un
+ * trou est une information, pas un défaut d'affichage. Le graphique est
+ * toujours rendu, même vide, pour que l'absence de données se lise à l'écran.
+ */
+export function MeasuredTrend({ history, height = 150 }: { history: MeasuredWeek[]; height?: number }) {
+  const w = 320;
+  const padL = 26;
+  const padR = 8;
+  const padT = 10;
+  const padB = 22;
+  const innerW = w - padL - padR;
+  const innerH = height - padT - padB;
+  const x = (i: number) => padL + (history.length <= 1 ? innerW / 2 : (i / (history.length - 1)) * innerW);
+  const y = (v: number) => padT + (1 - v / 100) * innerH;
+
+  const pathOf = (key: "pitch" | "stability") => {
+    let d = "";
+    let pen = false;
+    history.forEach((h, i) => {
+      const v = h[key];
+      if (v === null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)} `;
+      pen = true;
+    });
+    return d.trim();
   };
-  const poly = ids.map((id, i) => point(i, skills[id].score / 100)).map(([x, y]) => `${x},${y}`).join(" ");
+
+  const plotted = history.filter((h) => h.pitch !== null || h.stability !== null).length;
+  const series: Array<{ key: "pitch" | "stability"; color: string; label: string }> = [
+    { key: "pitch", color: SKILLS.pitch.color, label: SKILLS.pitch.label },
+    { key: "stability", color: SKILLS.stability.color, label: SKILLS.stability.label },
+  ];
+  const weekLabel = (i: number) => new Date(history[i].weekStart).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const labelled = history.length > 0 ? [0, Math.floor((history.length - 1) / 2), history.length - 1] : [];
+
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[320px] mx-auto" role="img" aria-label="Radar des compétences">
-      {[0.25, 0.5, 0.75, 1].map((v) => (
-        <polygon key={v} points={ids.map((_, i) => point(i, v).join(",")).join(" ")} fill="none" stroke="rgba(255,255,255,0.08)" />
-      ))}
-      {ids.map((_, i) => {
-        const [x, y] = point(i, 1);
-        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="rgba(255,255,255,0.08)" />;
-      })}
-      <polygon points={poly} fill="rgba(245,158,11,0.22)" stroke="var(--color-accent)" strokeWidth={2} strokeLinejoin="round" />
-      {ids.map((id, i) => {
-        const [x, y] = point(i, skills[id].score / 100);
-        return <circle key={id} cx={x} cy={y} r={3.5} fill={SKILLS[id].color} />;
-      })}
-      {ids.map((id, i) => {
-        const [x, y] = point(i, 1.3);
-        return (
-          <text key={id} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={10} fill="var(--color-fg-muted)">
-            {SKILLS[id].shortLabel}
+    <div>
+      <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }} role="img" aria-label="Évolution mesurée">
+        {[0, 25, 50, 75, 100].map((v) => (
+          <g key={v}>
+            <line x1={padL} y1={y(v)} x2={w - padR} y2={y(v)} stroke="rgba(255,255,255,0.08)" />
+            <text x={padL - 4} y={y(v)} textAnchor="end" dominantBaseline="middle" fontSize={9} fill="var(--color-fg-subtle)">
+              {v}
+            </text>
+          </g>
+        ))}
+        {series.map((s) => (
+          <g key={s.key}>
+            <path d={pathOf(s.key)} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+            {history.map((h, i) => (h[s.key] === null ? null : <circle key={i} cx={x(i)} cy={y(h[s.key] as number)} r={3} fill={s.color} />))}
+          </g>
+        ))}
+        {labelled.map((i) => (
+          <text key={i} x={x(i)} y={height - 6} textAnchor={i === 0 ? "start" : i === history.length - 1 ? "end" : "middle"} fontSize={9} fill="var(--color-fg-subtle)">
+            {weekLabel(i)}
           </text>
-        );
-      })}
-    </svg>
+        ))}
+        {plotted < 2 && (
+          <text x={padL + innerW / 2} y={padT + innerH / 2} textAnchor="middle" dominantBaseline="middle" fontSize={11} fill="var(--color-fg-muted)">
+            Pas encore assez de mesures pour tracer une évolution.
+          </text>
+        )}
+      </svg>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+        {series.map((s) => (
+          <span key={s.key} className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} aria-hidden />
+            {s.label}
+          </span>
+        ))}
+        <span className="text-fg-subtle">Une semaine sans au moins quatre mesures reste vide.</span>
+      </div>
+    </div>
   );
 }
 

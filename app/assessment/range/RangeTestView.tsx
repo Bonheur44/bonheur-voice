@@ -22,43 +22,18 @@ import {
 import { useAppStore } from "@/lib/store";
 import { analyseVocalProfile, describeEstimate, formatBand, suggestedWorkingRange } from "@/lib/vocal/profile";
 import { centerFor, partLabel } from "@/lib/vocal/voiceParts";
+import { MIN_FRAME_CLARITY, MIN_FRAME_LEVEL, observationFrom, summarizeFrames, type Capture } from "@/lib/vocal/capture";
 import type { Comfort, VocalObservation } from "@/lib/vocal/types";
-import { cn, uid } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 /** Étapes de l'écran, distinctes des phases du test lui-même. */
 type Stage = "intro" | "playing" | "listening" | "comfort" | "unclear" | "done";
 
-/** Clarté minimale d'une trame pour être retenue. Même seuil que les autres widgets. */
-const MIN_FRAME_CLARITY = 0.85;
-const MIN_FRAME_LEVEL = 0.03;
 /** Trames valides nécessaires pour conclure : environ une seconde de son tenu. */
 const NEEDED_FRAMES = 45;
 /** Au-delà, on renonce plutôt que de conclure sur trop peu. */
 const LISTEN_TIMEOUT_MS = 7000;
 const MIN_FRAMES_TO_CONCLUDE = 20;
-
-interface Capture {
-  detectedMidi: number;
-  spreadCents: number;
-  heldSeconds: number;
-  clarity: number;
-}
-
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-/**
- * Dispersion robuste, en cents : écart absolu médian mis à l'échelle.
- * Une attaque un peu basse ou une fin de note qui retombe ne doivent pas faire
- * passer une tenue correcte pour instable.
- */
-function robustSpreadCents(midis: number[], center: number): number {
-  const deviations = midis.map((m) => Math.abs(m - center) * 100);
-  return 1.4826 * median(deviations);
-}
 
 export function RangeTestView() {
   const router = useRouter();
@@ -103,17 +78,8 @@ export function RangeTestView() {
     else submit(result, undefined);
   }
 
-  const buildCapture = (): Capture | null => {
-    const midis = samplesRef.current;
-    if (midis.length < MIN_FRAMES_TO_CONCLUDE) return null;
-    const center = median(midis);
-    return {
-      detectedMidi: center,
-      spreadCents: robustSpreadCents(midis, center),
-      heldSeconds: Math.max(0, (lastAtRef.current - startedAtRef.current) / 1000),
-      clarity: clarityRef.current.reduce((a, c) => a + c, 0) / Math.max(1, clarityRef.current.length),
-    };
-  };
+  const buildCapture = (): Capture | null =>
+    summarizeFrames(samplesRef.current, clarityRef.current, (lastAtRef.current - startedAtRef.current) / 1000, MIN_FRAMES_TO_CONCLUDE);
 
   const { frame, status } = usePitch(micOn, (f) => {
     if (stageRef.current !== "listening") return;
@@ -147,20 +113,8 @@ export function RangeTestView() {
     }, 1700);
   }
 
-  const observationFrom = (result: Capture | null, comfort?: Comfort): VocalObservation => ({
-    id: uid(),
-    targetMidi: targetRef.current,
-    detectedMidi: result?.detectedMidi ?? null,
-    spreadCents: result?.spreadCents ?? 0,
-    heldSeconds: result?.heldSeconds ?? 0,
-    clarity: result?.clarity ?? 0,
-    comfort,
-    source: "range-test",
-    at: new Date().toISOString(),
-  });
-
   function submit(result: Capture | null, comfort?: Comfort) {
-    const observation = observationFrom(result, comfort);
+    const observation = observationFrom(targetRef.current, result, "range-test", comfort);
     const blocked = comfort === "impossible" || comfort === "strained";
     const next = advanceRangeTest(
       state,

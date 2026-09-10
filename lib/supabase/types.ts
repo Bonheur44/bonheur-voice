@@ -22,7 +22,6 @@ export interface ProfileRow {
 export interface SkillRow {
   user_id: string;
   skill_id: string;
-  score: number;
   feedback_history: number[];
   exercises_done: number;
   updated_at: string;

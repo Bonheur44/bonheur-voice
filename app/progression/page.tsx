@@ -1,23 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { ActivityGrid, SkillRadar, WeeklyBars } from "@/components/charts";
-import { SkillBars } from "@/components/dashboard/SkillBars";
+import { useMemo } from "react";
+import { ActivityGrid, MeasuredTrend, WeeklyBars } from "@/components/charts";
+import { SkillsOverview } from "@/components/dashboard/SkillsOverview";
 import { DeclaredVsEstimated, VocalProfileCard } from "@/components/vocal/VocalProfileCard";
 import { Card, Eyebrow, SectionTitle, Spinner, Stat } from "@/components/ui";
-import { ACHIEVEMENTS, completedSessions, computeStreak, dailyActivity, levelProgress, totalTrainingTime, weeklyStats } from "@/lib/progression";
-import { FEEDBACK_LABELS, LEVELS, SKILLS, SKILL_ORDER } from "@/lib/skills";
+import { ACHIEVEMENTS, completedSessions, computeStreak, dailyActivity, levelProgress, measureSkills, measuredHistory, totalTrainingTime, weeklyStats } from "@/lib/progression";
+import { LEVELS } from "@/lib/skills";
 import { useAppStore } from "@/lib/store";
 import { useHydrated, useLevel } from "@/lib/store/hooks";
-import { average, formatHours } from "@/lib/utils";
-import { summarizeFeedback } from "@/lib/routine/generator";
+import { formatHours } from "@/lib/utils";
 
 export default function ProgressionPage() {
   const hydrated = useHydrated();
   const skills = useAppStore((s) => s.skills);
   const sessions = useAppStore((s) => s.sessions);
   const achievements = useAppStore((s) => s.achievements);
+  const observations = useAppStore((s) => s.observations);
   const level = useLevel();
+  const measured = useMemo(() => measureSkills(observations), [observations]);
+  const history = useMemo(() => measuredHistory(observations), [observations]);
 
   if (!hydrated) {
     return (
@@ -31,9 +34,7 @@ export default function ProgressionPage() {
   const streak = computeStreak(sessions);
   const weeks = weeklyStats(sessions, 8);
   const days = dailyActivity(sessions, 28);
-  const allFeedback = done.flatMap((s) => s.exercises.filter((e) => e.feedback).map((e) => e.feedback!));
-  const avgFb = average(allFeedback);
-  const lp = levelProgress(level, skills, sessions);
+  const lp = levelProgress(level, skills, sessions, measured);
   const exercisesDone = done.reduce((a, s) => a + s.exercises.filter((e) => e.completed).length, 0);
   const unlocked = new Set(achievements.map((a) => a.id));
 
@@ -61,10 +62,12 @@ export default function ProgressionPage() {
 
       <Card>
         <SectionTitle>Compétences</SectionTitle>
-        <div className="grid gap-6 md:grid-cols-2 md:items-center">
-          <SkillRadar skills={skills} />
-          <SkillBars skills={skills} compact />
-        </div>
+        <SkillsOverview />
+      </Card>
+
+      <Card>
+        <SectionTitle>Évolution mesurée</SectionTitle>
+        <MeasuredTrend history={history} />
       </Card>
 
       <Card>
@@ -75,8 +78,9 @@ export default function ProgressionPage() {
             {lp.details.map((d) => (
               <div key={d.label} className="flex items-center justify-between text-sm">
                 <span className="text-fg-muted">{d.label}</span>
-                <span className={`font-mono ${d.current >= d.target ? "text-success" : ""}`}>
-                  {d.current} / {d.target}
+                <span className={`font-mono ${d.current !== null && d.current >= d.target ? "text-success" : ""}`}>
+                  {d.current ?? "—"} / {d.target}
+                  {d.current === null && <span className="ml-2 font-sans text-fg-subtle">données insuffisantes</span>}
                 </span>
               </div>
             ))}
@@ -92,36 +96,6 @@ export default function ProgressionPage() {
       <Card>
         <SectionTitle>28 derniers jours</SectionTitle>
         <ActivityGrid data={days} />
-      </Card>
-
-      <Card>
-        <SectionTitle>Ressenti par compétence</SectionTitle>
-        {allFeedback.length === 0 ? (
-          <p className="text-sm text-fg-muted">Aucun retour pour l&apos;instant.</p>
-        ) : (
-          <div className="space-y-2">
-            <div className="text-sm text-fg-muted">
-              Moyenne générale : <span className="font-mono text-fg">{avgFb.toFixed(1)} / 5</span> · {summarizeFeedback(allFeedback)}
-            </div>
-            <ul className="divide-y divide-border">
-              {SKILL_ORDER.map((id) => {
-                const fb = skills[id].feedbackHistory;
-                if (fb.length === 0) return null;
-                const last = fb[fb.length - 1];
-                return (
-                  <li key={id} className="flex items-center justify-between py-2 text-sm">
-                    <span>
-                      {SKILLS[id].emoji} {SKILLS[id].label}
-                    </span>
-                    <span className="text-fg-muted">
-                      {summarizeFeedback(fb)} · dernier {FEEDBACK_LABELS[last].emoji} · {skills[id].exercisesDone} ex.
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
       </Card>
 
       <Card>

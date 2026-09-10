@@ -55,8 +55,8 @@ export function mergeSkills(
       continue;
     }
     if (stamp(l.updatedAt) === stamp(r.updatedAt)) {
-      // Égalité d'horodatage : on garde la trace la plus avancée plutôt que d'en perdre.
-      out[id] = l.score >= r.score ? l : r;
+      // Égalité d'horodatage : on garde la trace la plus fournie plutôt que d'en perdre.
+      out[id] = l.exercisesDone >= r.exercisesDone ? l : r;
     } else {
       out[id] = atLeastAsRecent(l.updatedAt, r.updatedAt) ? l : r;
     }

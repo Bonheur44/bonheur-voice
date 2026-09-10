@@ -64,7 +64,6 @@ export function skillsFromRows(rows: SkillRow[]): Partial<Record<SkillId, SkillS
   for (const row of rows) {
     if (!(row.skill_id in SKILLS)) continue;
     out[row.skill_id as SkillId] = {
-      score: row.score,
       feedbackHistory: (row.feedback_history ?? []).filter((f) => f >= 1 && f <= 5) as Feedback[],
       exercisesDone: row.exercises_done,
       updatedAt: row.updated_at,
@@ -153,7 +152,6 @@ export function skillsToRows(skills: Record<SkillId, SkillState>, userId: string
   return (Object.keys(skills) as SkillId[]).map((id) => ({
     user_id: userId,
     skill_id: id,
-    score: skills[id].score,
     feedback_history: skills[id].feedbackHistory,
     exercises_done: skills[id].exercisesDone,
     updated_at: skills[id].updatedAt ?? EPOCH,

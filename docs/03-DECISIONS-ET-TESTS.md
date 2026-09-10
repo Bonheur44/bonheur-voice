@@ -15,15 +15,16 @@
 | Détection de hauteur | Autocorrélation normalisée maison, seuil de clarté 0,85, ±25 cents = correct | Pas de dépendance ; limites affichées partout |
 | Voix du mode chorale | Oscillateurs (dent de scie filtrée + sinus, vibrato léger), timbres différents par pupitre | Suffisant pour l'indépendance auditive |
 | Choral SATB | 8 mesures en Do majeur, ligne de ténor intérieure (notes répétées, mouvements conjoints), transposée pour tenir dans la zone | Réaliste par rapport aux difficultés décrites |
-| Gain de score | `3 × facteurDifficulté × facteurRessenti × facteurDurée`, rendement décroissant | Progression visible sans être triviale ; « très facile » rapporte moins que « correct » |
+| Compétences mesurées | Justesse et stabilité recalculées depuis les observations ; aucune note pour les sept autres | Un chiffre qui ne peut que monter et qui ignore le micro n'est pas une mesure. Mieux vaut deux valeurs honnêtes que neuf inventées |
 | Wake lock | Demandé pendant un exercice si disponible | L'écran ne s'éteint pas pendant qu'on chante |
 
-## Tests unitaires (Vitest, 42 tests)
+## Tests unitaires (Vitest)
 
 - Générateur : budget respecté pour 10/15/20/30/45 min, structure respiration → échauffement → … → retour au calme, déterminisme, respect du niveau, pas de registres/chorale au niveau 1, pas de doublon, bornes de durée.
 - Adaptation : difficulté cible baisse après « très difficile », monte après « très facile », bornée par le niveau ; poids plus fort pour une compétence faible.
 - Catalogue : identifiants uniques, prérequis valides, couverture de chaque compétence.
-- Progression : gains de score, série (jours consécutifs, tolérance d'un jour), niveaux (seuils, pas de saut), recommandations.
+- Progression : décompte de pratique, série (jours consécutifs, tolérance d'un jour), niveaux (seuils mesurés et pratiqués, pas de saut, refus de progresser sans mesure), recommandations (recul mesuré annoncé comme un progrès).
+- Mesure : échelles cents → 0–100, seuil de six mesures, pondération par fraîcheur, tolérance d'octave, baisse quand les mesures récentes se dégradent, tendance sur trois semaines, semaines sans assez de mesures laissées vides.
 - Notes : MIDI ↔ Hz, noms français, cents, transposition ; choral : quatre voix de même durée, voix qui ne se croisent pas, ténor dans Do3–Sol4.
 
 ## Tests de bout en bout (Playwright, mobile Pixel 7 + desktop Chrome, micro simulé)

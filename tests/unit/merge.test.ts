@@ -68,21 +68,21 @@ describe("mergeSkills", () => {
   };
 
   it("retient la compétence la plus récemment modifiée", () => {
-    const local = withSkill("pitch", { score: 55, updatedAt: NEW });
-    const remote = withSkill("pitch", { score: 20, updatedAt: OLD });
-    expect(mergeSkills(local, remote).pitch.score).toBe(55);
-    expect(mergeSkills(withSkill("pitch", { score: 55, updatedAt: OLD }), withSkill("pitch", { score: 20, updatedAt: NEW })).pitch.score).toBe(20);
+    const local = withSkill("pitch", { exercisesDone: 55, updatedAt: NEW });
+    const remote = withSkill("pitch", { exercisesDone: 20, updatedAt: OLD });
+    expect(mergeSkills(local, remote).pitch.exercisesDone).toBe(55);
+    expect(mergeSkills(withSkill("pitch", { exercisesDone: 55, updatedAt: OLD }), withSkill("pitch", { exercisesDone: 20, updatedAt: NEW })).pitch.exercisesDone).toBe(20);
   });
 
-  it("à horodatage égal, conserve la progression la plus avancée", () => {
-    const local = withSkill("stability", { score: 30, updatedAt: NEW });
-    const remote = withSkill("stability", { score: 44, updatedAt: NEW });
-    expect(mergeSkills(local, remote).stability.score).toBe(44);
+  it("à horodatage égal, conserve la trace la plus fournie", () => {
+    const local = withSkill("stability", { exercisesDone: 30, updatedAt: NEW });
+    const remote = withSkill("stability", { exercisesDone: 44, updatedAt: NEW });
+    expect(mergeSkills(local, remote).stability.exercisesDone).toBe(44);
   });
 
   it("laisse gagner le distant sur une compétence locale jamais travaillée", () => {
-    const remote = withSkill("breathing", { score: 61, updatedAt: OLD });
-    expect(mergeSkills(initialSkills(), remote).breathing.score).toBe(61);
+    const remote = withSkill("breathing", { exercisesDone: 61, updatedAt: OLD });
+    expect(mergeSkills(initialSkills(), remote).breathing.exercisesDone).toBe(61);
   });
 
   it("garde toutes les compétences même si le distant est incomplet", () => {
@@ -150,7 +150,7 @@ describe("mergeSnapshots", () => {
     const fresh = localData();
     const remote = emptyRemote({
       profile: profile({ onboarded: true, lowNote: 50, updatedAt: OLD }),
-      skills: { pitch: { score: 62, feedbackHistory: [], exercisesDone: 12, updatedAt: OLD } },
+      skills: { pitch: { feedbackHistory: [], exercisesDone: 12, updatedAt: OLD } },
       sessions: [session("s1", { date: "2026-09-05", completedAt: OLD, updatedAt: OLD, totalDuration: 900 })],
       achievements: [{ id: "first-session", unlockedAt: OLD }],
     });
@@ -159,7 +159,7 @@ describe("mergeSnapshots", () => {
 
     expect(merged.profile.onboarded).toBe(true);
     expect(merged.profile.lowNote).toBe(50);
-    expect(merged.skills.pitch.score).toBe(62);
+    expect(merged.skills.pitch.exercisesDone).toBe(12);
     expect(merged.sessions).toHaveLength(1);
     expect(merged.achievements).toHaveLength(1);
   });
@@ -192,7 +192,7 @@ describe("conversion avec les lignes de la base", () => {
 
   it("fait l'aller-retour sur les compétences et ignore les identifiants inconnus", () => {
     const rows = skillsToRows(initialSkills(), "u1");
-    rows.push({ user_id: "u1", skill_id: "inconnu", score: 10, feedback_history: [], exercises_done: 0, updated_at: NEW });
+    rows.push({ user_id: "u1", skill_id: "inconnu", feedback_history: [], exercises_done: 0, updated_at: NEW });
     const back = skillsFromRows(rows);
     expect(Object.keys(back)).toHaveLength(Object.keys(initialSkills()).length);
     expect("inconnu" in back).toBe(false);

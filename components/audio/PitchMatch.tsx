@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { LevelMeter, MicLimits, MicNotice, WidgetFrame, foldCents, usePitch, useRange } from "./common";
 import { getAudioEngine } from "@/lib/audio/engine";
-import { centsOff, midiToName } from "@/lib/audio/notes";
+import { centsOff, freqToMidi, midiToName } from "@/lib/audio/notes";
+import { useAppStore } from "@/lib/store";
+import { MIN_FRAME_CLARITY, MIN_FRAME_LEVEL, observationFrom, summarizeFrames } from "@/lib/vocal/capture";
 import { cn } from "@/lib/utils";
 
 type Verdict = "low" | "ok" | "high" | null;
@@ -13,6 +15,13 @@ function verdictOf(cents: number): Verdict {
   if (Math.abs(cents) <= 25) return "ok";
   return cents < 0 ? "low" : "high";
 }
+
+/**
+ * Trames valides avant de conclure : un peu moins d'une seconde de son tenu.
+ * C'est aussi la durée minimale pour que la tentative compte comme une mesure
+ * de justesse, et pas seulement comme un repère à l'écran.
+ */
+const NEEDED_SAMPLES = 40;
 
 /** Exercice « Trouve la note » : l'application joue une note, l'utilisateur la reproduit, le micro donne un repère. */
 export function PitchMatch({ range = "mid", onResult }: { range?: "low" | "mid" | "full"; onResult?: (ok: boolean) => void }) {
@@ -26,18 +35,27 @@ export function PitchMatch({ range = "mid", onResult }: { range?: "low" | "mid" 
   const samples = useRef<number[]>([]);
   const listening = useRef(false);
   const lastLiveUpdate = useRef(0);
+  const midis = useRef<number[]>([]);
+  const clarities = useRef<number[]>([]);
+  const firstAt = useRef(0);
+  const lastAt = useRef(0);
+  const addObservations = useAppStore((s) => s.addObservations);
 
   const { frame, status } = usePitch(micOn, (f) => {
     const t = targetRef.current;
-    if (t === null || !f.frequency || f.clarity <= 0.85 || f.level <= 0.03) return;
+    if (t === null || !f.frequency || f.clarity < MIN_FRAME_CLARITY || f.level < MIN_FRAME_LEVEL) return;
     const cents = foldCents(centsOff(f.frequency, t));
     if (f.time - lastLiveUpdate.current > 50) {
       lastLiveUpdate.current = f.time;
       setLive({ cents, verdict: verdictOf(cents) });
     }
     if (!listening.current) return;
+    if (samples.current.length === 0) firstAt.current = f.time;
+    lastAt.current = f.time;
     samples.current.push(cents);
-    if (samples.current.length >= 25) {
+    midis.current.push(freqToMidi(f.frequency));
+    clarities.current.push(f.clarity);
+    if (samples.current.length >= NEEDED_SAMPLES) {
       const sorted = [...samples.current].sort((a, b) => a - b);
       const med = sorted[Math.floor(sorted.length / 2)];
       const v = verdictOf(med);
@@ -45,6 +63,10 @@ export function PitchMatch({ range = "mid", onResult }: { range?: "low" | "mid" 
       setResult(v);
       setStats((s) => ({ ok: s.ok + (v === "ok" ? 1 : 0), total: s.total + 1 }));
       onResult?.(v === "ok");
+      // La tentative devient une observation : c'est elle qui fait évoluer la
+      // justesse mesurée, dans un sens comme dans l'autre.
+      const capture = summarizeFrames(midis.current, clarities.current, (lastAt.current - firstAt.current) / 1000, NEEDED_SAMPLES);
+      if (capture) addObservations([observationFrom(t, capture, "pitch-test")]);
     }
   });
 
@@ -74,6 +96,8 @@ export function PitchMatch({ range = "mid", onResult }: { range?: "low" | "mid" 
     setResult(null);
     setLive(null);
     samples.current = [];
+    midis.current = [];
+    clarities.current = [];
     listening.current = false;
     playTarget(m);
     window.setTimeout(() => {

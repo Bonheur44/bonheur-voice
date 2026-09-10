@@ -1,6 +1,8 @@
 import type { Exercise, Feedback, Level, Session, SessionExercise, SkillId, SkillState } from "@/lib/types";
 import { EXERCISES } from "@/data/exercises";
 import { SKILLS, SKILL_ORDER } from "@/lib/skills";
+import { isMeasuredSkill, type MeasuredSkills } from "@/lib/progression/measured";
+import { practiceOf, practiceStanding, type Practice } from "@/lib/progression/practice";
 import { average, clamp, hashString, seededRandom, uid } from "@/lib/utils";
 
 export interface GeneratorInput {
@@ -14,11 +16,28 @@ export interface GeneratorInput {
   date: string;
   /** Graine optionnelle pour régénérer une variante. */
   seed?: number;
+  /** Compétences mesurées au micro. Sans elles, seule la pratique dose la séance. */
+  measured?: MeasuredSkills;
 }
 
-/** Difficulté cible d'une compétence selon les derniers ressentis. */
-export function targetDifficulty(skill: SkillState, level: Level): number {
-  const base = Math.min(5, 1 + Math.floor(skill.score / 25)); // 0–24 → 1, 25–49 → 2, 50–74 → 3, 75+ → 4
+/**
+ * Position 0–100 d'une compétence, pour doser la séance.
+ *
+ * Mesurée quand le micro le permet, sinon déduite de la pratique. Une valeur
+ * mesurée basse attire du temps d'entraînement ; une compétence jamais mesurée
+ * n'est pas pénalisée, elle est simplement dosée comme les autres.
+ */
+export function standingOf(id: SkillId, measured: MeasuredSkills | undefined, practice: Practice): number {
+  if (measured && isMeasuredSkill(id)) {
+    const value = measured[id].value;
+    if (value !== null) return value;
+  }
+  return practiceStanding(practice[id]);
+}
+
+/** Difficulté cible d'une compétence selon sa position et les derniers ressentis. */
+export function targetDifficulty(skill: SkillState, level: Level, standing: number): number {
+  const base = Math.min(5, 1 + Math.floor(standing / 25)); // 0–24 → 1, 25–49 → 2, 50–74 → 3, 75+ → 4
   const recent = skill.feedbackHistory.slice(-5);
   let adjust = 0;
   if (recent.length >= 3) {
@@ -31,10 +50,10 @@ export function targetDifficulty(skill: SkillState, level: Level): number {
 }
 
 /** Poids d'une compétence dans la séance. */
-export function skillWeight(id: SkillId, skill: SkillState, level: Level): number {
+export function skillWeight(id: SkillId, skill: SkillState, level: Level, standing: number): number {
   const base = SKILLS[id].weights[level];
   if (base === 0) return 0;
-  let w = base * (1 + (100 - skill.score) / 100);
+  let w = base * (1 + (100 - standing) / 100);
   const recent = skill.feedbackHistory.slice(-5);
   if (recent.length >= 3 && average(recent) >= 4.2) w *= 0.8; // trop facile : un peu moins de temps
   return w;
@@ -81,13 +100,15 @@ export function generateSession(input: GeneratorInput): Session {
   const recent = recentExerciseIds(history);
   const used = new Set<string>();
   const eligible = (cat: SkillId) => EXERCISES.filter((e) => e.category === cat && e.level <= level && !e.cooldown);
+  const practice = practiceOf(skills, history);
+  const standing = (id: SkillId) => standingOf(id, input.measured, practice);
 
   const plan: SessionExercise[] = [];
   const short = duration <= 12 * 60;
 
   // 1. Respiration
   const breathBudget = Math.round(duration * (short ? 0.14 : 0.15));
-  const breath = pickExercise(eligible("breathing"), targetDifficulty(skills.breathing, level), recent, rnd, used);
+  const breath = pickExercise(eligible("breathing"), targetDifficulty(skills.breathing, level, standing("breathing")), recent, rnd, used);
   if (breath) {
     used.add(breath.id);
     plan.push({ exerciseId: breath.id, plannedDuration: scaleDuration(breath, breathBudget), completed: false, skipped: false });
@@ -112,7 +133,7 @@ export function generateSession(input: GeneratorInput): Session {
   const usedSoFar = plan.reduce((a, p) => a + p.plannedDuration, 0);
   const workBudget = Math.max(0, duration - usedSoFar - scaleDuration(cool, coolBudget));
 
-  const weights = SKILL_ORDER.map((id) => ({ id, w: skillWeight(id, skills[id], level) })).filter((x) => x.w > 0);
+  const weights = SKILL_ORDER.map((id) => ({ id, w: skillWeight(id, skills[id], level, standing(id)) })).filter((x) => x.w > 0);
   const totalW = weights.reduce((a, x) => a + x.w, 0);
   const maxBlocks = short ? 2 : duration <= 20 * 60 ? 4 : duration <= 30 * 60 ? 5 : 7;
   // Compétences retenues : les plus pondérées, avec un peu d'aléa pour varier
@@ -122,7 +143,7 @@ export function generateSession(input: GeneratorInput): Session {
   const blocks: SessionExercise[] = [];
   for (const { id, w } of ranked) {
     const budget = Math.round((workBudget * w) / rankedTotal);
-    const ex = pickExercise(eligible(id), targetDifficulty(skills[id], level), recent, rnd, used);
+    const ex = pickExercise(eligible(id), targetDifficulty(skills[id], level, standing(id)), recent, rnd, used);
     if (!ex) continue;
     used.add(ex.id);
     blocks.push({ exerciseId: ex.id, plannedDuration: scaleDuration(ex, budget), completed: false, skipped: false });
@@ -136,7 +157,7 @@ export function generateSession(input: GeneratorInput): Session {
   while (leftover >= 75 && guard < ranked.length * 3 && blocks.length < maxBlocks + maxExtra) {
     const { id } = ranked[guard % ranked.length];
     guard++;
-    const ex = pickExercise(eligible(id), targetDifficulty(skills[id], level), recent, rnd, used);
+    const ex = pickExercise(eligible(id), targetDifficulty(skills[id], level, standing(id)), recent, rnd, used);
     if (!ex) continue;
     used.add(ex.id);
     const d = scaleDuration(ex, Math.min(leftover, ex.duration));

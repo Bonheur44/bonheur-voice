@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { LegacyImportPrompt } from "@/components/auth/LegacyImportPrompt";
-import { SkillBars } from "@/components/dashboard/SkillBars";
+import { SkillsOverview } from "@/components/dashboard/SkillsOverview";
 import { SessionPlan } from "@/components/routine/SessionPlan";
 import { DeclaredVsEstimated, VocalProfileCard } from "@/components/vocal/VocalProfileCard";
 import { Badge, Callout, Card, Eyebrow, LinkButton, ProgressBar, SectionTitle, Spinner, Stat } from "@/components/ui";
 import { getExercise } from "@/data/exercises";
-import { buildRecommendations, completedSessions, computeStreak, levelProgress, totalTrainingTime } from "@/lib/progression";
+import { buildRecommendations, completedSessions, computeStreak, levelProgress, measureSkills, totalTrainingTime } from "@/lib/progression";
 import { FEEDBACK_LABELS, LEVELS } from "@/lib/skills";
 import { useAppStore } from "@/lib/store";
 import { useHydrated, useLevel } from "@/lib/store/hooks";
@@ -19,10 +19,12 @@ export default function DashboardPage() {
   const profile = useAppStore((s) => s.profile);
   const skills = useAppStore((s) => s.skills);
   const sessions = useAppStore((s) => s.sessions);
+  const observations = useAppStore((s) => s.observations);
   const current = useAppStore((s) => s.currentSession);
   const ensure = useAppStore((s) => s.ensureTodaySession);
   const level = useLevel();
   const hasDoneToday = useAppStore((s) => s.sessions.some((x) => !!x.completedAt && x.date === toDayKey()));
+  const measured = useMemo(() => measureSkills(observations), [observations]);
 
   // On prépare la séance du jour, sauf si une séance a déjà été terminée aujourd'hui (l'utilisateur en relance une s'il le souhaite).
   useEffect(() => {
@@ -41,8 +43,8 @@ export default function DashboardPage() {
   const done = completedSessions(sessions);
   const streak = computeStreak(sessions);
   const totalTime = totalTrainingTime(sessions);
-  const recs = buildRecommendations(skills, sessions, level);
-  const lp = levelProgress(level, skills, sessions);
+  const recs = buildRecommendations(skills, sessions, level, measured);
+  const lp = levelProgress(level, skills, sessions, measured);
   const todayDone = done.filter((s) => s.date === today);
   const session = current && current.date === today ? current : null;
   const started = !!session?.startedAt;
@@ -130,7 +132,7 @@ export default function DashboardPage() {
         >
           Mes compétences
         </SectionTitle>
-        <SkillBars skills={skills} />
+        <SkillsOverview compact />
       </Card>
 
       {/* Vers le niveau suivant */}
@@ -143,10 +145,11 @@ export default function DashboardPage() {
                 <div className="mb-1 flex justify-between text-xs text-fg-muted">
                   <span>{d.label}</span>
                   <span className="font-mono">
-                    {d.current} / {d.target}
+                    {d.current ?? "—"} / {d.target}
+                    {d.current === null && <span className="ml-2 font-sans text-fg-subtle">données insuffisantes</span>}
                   </span>
                 </div>
-                <ProgressBar value={(d.current / d.target) * 100} height={6} color={d.current >= d.target ? "var(--color-success)" : undefined} />
+                <ProgressBar value={((d.current ?? 0) / d.target) * 100} height={6} color={d.current !== null && d.current >= d.target ? "var(--color-success)" : undefined} />
               </div>
             ))}
           </div>
